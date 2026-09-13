@@ -33,6 +33,16 @@
   Didaktična mreža pomaga otroku videti kocke / celice.
   Tehnični rob pa mora predstavljati dejansko geometrijo predmeta.
 
+  v17: tehniški robovi imajo svojo vizualno hierarhijo in se rišejo ČEZ mrežo.
+  Pri voxel teaching shapes računamo tudi notranje vidne robove po depth profilu.
+  Builder pa za full/cut gradnike primerja dejansko najbližjo vidno površino.
+
+  v18: voxel projection engine zdaj avtomatsko poišče tudi SKRITE tehniške robove.
+  To pomeni: ne gledamo več samo silhuete, ampak vzamemo dejanske 3D exterior
+  feature edges in preverimo, ali jih iz izbranega pogleda zakriva material bližje kameri.
+  Builder dobi isto logiko za modele iz polnih kock; cut hidden-edge klasifikacija
+  ostane ločen naslednji korak, da ne bi risali napačnih črtkanih diagonal.
+
   Če boš karkoli spreminjal:
   - najprej poglej kaj učenec vidi,
   - potem kaj lahko klikne / premakne,
@@ -1259,7 +1269,7 @@
   const COLORS = {
     ink: "#1d2730",
     grid: "rgba(42,69,88,.10)",
-    ray: "rgba(46,74,92,.38)",
+    ray: "rgba(74,100,118,.46)",
     planeEdge: "rgba(70,88,98,.55)",
     naris: "rgba(64,128,120,.30)",
     tloris: "rgba(190,149,78,.30)",
@@ -1268,6 +1278,42 @@
     projTop: "rgba(120,95,46,.58)",
     projSide: "rgba(110,104,38,.54)",
     hiddenEdge: "rgba(51,62,69,.82)"
+  };
+
+
+  /*
+    PROJECTION LINE HIERARCHY
+    -------------------------
+    To je zdaj centralno pravilo za CELO aplikacijo - učni del in builder.
+
+    Zakaj to sploh rabimo?
+    Ker "mrežna črta" in "tehniški rob" nista ista informacija.
+    Mreža pomaga šteti kocke. Tehniški rob pa govori o GEOMETRIJI telesa.
+
+    Zato mora tehniški rob ostati jasno viden tudi kadar je didaktična mreža ON.
+    Ne zanašamo se samo na barvo: uporabljamo tudi različno DEBELINO in DASH.
+  */
+  const PROJECTION_STYLE = {
+    didacticGrid:{
+      color:"rgba(204,214,221,.80)",
+      width:0.72,
+      dash:[]
+    },
+    outerEdge:{
+      color:"rgba(28,40,48,.99)",
+      width:2.15,
+      dash:[]
+    },
+    visibleEdge:{
+      color:"rgba(42,57,67,.98)",
+      width:1.72,
+      dash:[]
+    },
+    hiddenEdge:{
+      color:"rgba(70,80,89,.98)",
+      width:1.34,
+      dash:[8,5]
+    }
   };
 
   /*
@@ -1516,6 +1562,292 @@
   }
 
   /*
+    VISIBLE TECHNICAL EDGES FOR VOXEL TEACHING SHAPES
+    --------------------------------------------------
+    Stari projection code je znal dobro narediti SILHUETO, ni pa vedel za
+    notranji vidni rob, ki nastane npr. med dvema različnima višinama stopnic.
+
+    Za vgrajene predmete 1-5 imamo samo polne voxel kocke, zato je rešitev
+    lahko zelo zanesljiva in bistveno preprostejša od general CAD engine-a:
+
+      TOP   -> za vsak (x,y) gledamo najvišjo vidno z-ploskev
+      FRONT -> za vsak (x,z) gledamo najbližji y (kamera je na -y strani)
+      SIDE  -> za vsak (y,z) gledamo najbližji x (pogled z leve, -x)
+
+    Če imata dve sosednji projekcijski celici različen visible depth,
+    je skupna meja pravi vidni tehniški rob in NE samo didaktična mreža.
+  */
+  function voxelVisibleInnerEdges(cubes,bounds,scale,view){
+    const profile=new Map();
+
+    function put(a,b,depth){
+      const k=`${a},${b}`;
+      if(!profile.has(k)){
+        profile.set(k,{a,b,depth});
+        return;
+      }
+
+      const old=profile.get(k);
+      if(view==="top"){
+        // Od zgoraj je bližje večji z.
+        if(depth>old.depth)old.depth=depth;
+      }else{
+        // Od spredaj / z leve je kamera na negativni strani osi.
+        // Bližje pomeni manjši y oziroma manjši x.
+        if(depth<old.depth)old.depth=depth;
+      }
+    }
+
+    cubes.forEach(([x,y,z])=>{
+      if(view==="top") put(x,y,z+1);
+      else if(view==="front") put(x,z,y);
+      else put(y,z,x);
+    });
+
+    const centerA=view==="side" ? bounds.cy : bounds.cx;
+    const centerB=view==="top" ? bounds.cy : bounds.cz;
+    const lines=[];
+    const EPS=1e-9;
+
+    function world2(a,b){
+      return [(a-centerA)*scale,(b-centerB)*scale];
+    }
+
+    profile.forEach(cell=>{
+      // Desni sosed v 2D projekciji.
+      const right=profile.get(`${cell.a+1},${cell.b}`);
+      if(right && Math.abs(right.depth-cell.depth)>EPS){
+        lines.push([
+          world2(cell.a+1,cell.b),
+          world2(cell.a+1,cell.b+1)
+        ]);
+      }
+
+      // Zgornji sosed v 2D projekciji.
+      const up=profile.get(`${cell.a},${cell.b+1}`);
+      if(up && Math.abs(up.depth-cell.depth)>EPS){
+        lines.push([
+          world2(cell.a,cell.b+1),
+          world2(cell.a+1,cell.b+1)
+        ]);
+      }
+    });
+
+    return lines;
+  }
+
+
+  /*
+    VOXEL HIDDEN-EDGE ENGINE
+    ------------------------
+    v17 je znal vprašati: "katera površina je NAJBLIŽJA?"
+    v18 doda še drugo vprašanje: "kateri DEJANSKI 3D robovi obstajajo zadaj?"
+
+    Pomembno: hidden edge ni kar vsaka meja med kockami.
+    Najprej iz zunanjih ploskev naredimo prave 3D FEATURE EDGES:
+      - rob med dvema koplanarnima zunanjima ploskvama = samo seam -> ignoriramo
+      - rob med ploskvama z različnima normalama = pravi geometrijski rob
+
+    Nato rob projiciramo in tik ob njem pogledamo depth profile.
+    Če je ista globina najbližja vsaj z ene strani -> rob je viden.
+    Če je pred njim material -> rob je skrit in ga lahko rišemo črtkano.
+
+    To je še vedno zelo lightweight, ker so voxel telesa diskretna in axis-aligned.
+    Ne rabimo generic CAD HLR algoritma ali WebGL depth buffer hacka.
+  */
+  function voxelEdgeKey3(a,b){
+    const A=`${a[0]},${a[1]},${a[2]}`;
+    const B=`${b[0]},${b[1]},${b[2]}`;
+    return A<B ? `${A}|${B}` : `${B}|${A}`;
+  }
+
+  function voxelEdgeKey2(a,b){
+    const A=`${a[0]},${a[1]}`;
+    const B=`${b[0]},${b[1]}`;
+    return A<B ? `${A}|${B}` : `${B}|${A}`;
+  }
+
+  function voxelFeatureEdges3D(cubes){
+    const occupied=new Set(cubes.map(c=>c.join(",")));
+    const buckets=new Map();
+
+    function neighborKey(c,n){
+      return `${c[0]+n[0]},${c[1]+n[1]},${c[2]+n[2]}`;
+    }
+
+    cubes.forEach(c=>{
+      const [x,y,z]=c;
+      FACE_DEFS.forEach(fd=>{
+        if(occupied.has(neighborKey(c,fd.n)))return;
+
+        const pts=fd.v.map(([vx,vy,vz])=>[x+vx,y+vy,z+vz]);
+        for(let i=0;i<pts.length;i++){
+          const a=pts[i],b=pts[(i+1)%pts.length];
+          const k=voxelEdgeKey3(a,b);
+          if(!buckets.has(k))buckets.set(k,{a,b,normals:[]});
+          buckets.get(k).normals.push(fd.n);
+        }
+      });
+    });
+
+    const out=[];
+    buckets.forEach(edge=>{
+      const uniqueNormals=new Set(edge.normals.map(n=>n.join(",")));
+
+      // Dve koplanarni unit ploskvi lahko delita rob. To NI tehniški rob,
+      // samo razdelitev naše voxel mreže. Feature edge mora spremeniti normalo.
+      if(uniqueNormals.size>=2)out.push({a:edge.a,b:edge.b});
+    });
+    return out;
+  }
+
+  function voxelProjectionDepthProfile(cubes,view){
+    const profile=new Map();
+
+    cubes.forEach(([x,y,z])=>{
+      let a,b,depth;
+      if(view==="top"){
+        a=x;b=y;depth=z+1; // od zgoraj je bližje večji z
+      }else if(view==="front"){
+        a=x;b=z;depth=y;   // od spredaj je bližje manjši y
+      }else{
+        a=y;b=z;depth=x;   // z leve je bližje manjši x
+      }
+
+      const k=`${a},${b}`;
+      if(!profile.has(k)){
+        profile.set(k,depth);
+      }else if(view==="top"){
+        if(depth>profile.get(k))profile.set(k,depth);
+      }else if(depth<profile.get(k)){
+        profile.set(k,depth);
+      }
+    });
+
+    return profile;
+  }
+
+  function voxelProjectFeaturePoint(p,view){
+    if(view==="top")return {q:[p[0],p[1]],depth:p[2]};
+    if(view==="front")return {q:[p[0],p[2]],depth:p[1]};
+    return {q:[p[1],p[2]],depth:p[0]};
+  }
+
+  function mergeAxisAlignedSegments2D(lines){
+    const EPS=1e-9;
+    const groups=new Map();
+    const other=[];
+
+    function addGroup(key,start,end,kind,fixed){
+      if(!groups.has(key))groups.set(key,{kind,fixed,ranges:[]});
+      groups.get(key).ranges.push([Math.min(start,end),Math.max(start,end)]);
+    }
+
+    lines.forEach(seg=>{
+      if(!seg || seg.length!==2)return;
+      const a=seg[0],b=seg[1];
+      if(Math.abs(a[0]-b[0])<EPS){
+        addGroup(`v:${a[0]}`,a[1],b[1],"v",a[0]);
+      }else if(Math.abs(a[1]-b[1])<EPS){
+        addGroup(`h:${a[1]}`,a[0],b[0],"h",a[1]);
+      }else{
+        other.push(seg);
+      }
+    });
+
+    const out=[];
+    groups.forEach(g=>{
+      g.ranges.sort((r1,r2)=>r1[0]-r2[0]);
+      let cur=null;
+      g.ranges.forEach(r=>{
+        if(!cur){ cur=[r[0],r[1]]; return; }
+        if(r[0]<=cur[1]+EPS){
+          cur[1]=Math.max(cur[1],r[1]);
+        }else{
+          if(g.kind==="v")out.push([[g.fixed,cur[0]],[g.fixed,cur[1]]]);
+          else out.push([[cur[0],g.fixed],[cur[1],g.fixed]]);
+          cur=[r[0],r[1]];
+        }
+      });
+      if(cur){
+        if(g.kind==="v")out.push([[g.fixed,cur[0]],[g.fixed,cur[1]]]);
+        else out.push([[cur[0],g.fixed],[cur[1],g.fixed]]);
+      }
+    });
+
+    return [...out,...other];
+  }
+
+  function voxelHiddenEdgesGrid(cubes,view){
+    const profile=voxelProjectionDepthProfile(cubes,view);
+    const visibleProjectedKeys=new Set();
+    const hiddenCandidates=[];
+    const EPS_SAMPLE=0.001;
+    const EPS_DEPTH=1e-7;
+
+    voxelFeatureEdges3D(cubes).forEach(edge=>{
+      const A=voxelProjectFeaturePoint(edge.a,view);
+      const B=voxelProjectFeaturePoint(edge.b,view);
+
+      // Rob vzporeden smeri pogleda se v projekciji sesede v točko.
+      if(Math.abs(A.q[0]-B.q[0])<EPS_DEPTH && Math.abs(A.q[1]-B.q[1])<EPS_DEPTH)return;
+
+      // Pri axis-aligned voxel edge je depth po celotnem vidnem segmentu konstanten.
+      const edgeDepth=(A.depth+B.depth)/2;
+      const dx=B.q[0]-A.q[0],dy=B.q[1]-A.q[1];
+      const len=Math.hypot(dx,dy) || 1;
+      const nx=-dy/len,ny=dx/len;
+      const mid=[(A.q[0]+B.q[0])/2,(A.q[1]+B.q[1])/2];
+
+      let visible=false;
+      let occluded=false;
+
+      for(const sign of [-1,1]){
+        const u=mid[0]+nx*EPS_SAMPLE*sign;
+        const v=mid[1]+ny*EPS_SAMPLE*sign;
+        const ca=Math.floor(u),cb=Math.floor(v);
+        const d=profile.get(`${ca},${cb}`);
+        if(d===undefined)continue;
+
+        if(Math.abs(d-edgeDepth)<EPS_DEPTH){
+          visible=true;
+        }else{
+          const nearer=view==="top" ? d>edgeDepth+EPS_DEPTH : d<edgeDepth-EPS_DEPTH;
+          if(nearer)occluded=true;
+        }
+      }
+
+      const k=voxelEdgeKey2(A.q,B.q);
+      if(visible){
+        visibleProjectedKeys.add(k);
+      }else if(occluded){
+        hiddenCandidates.push([A.q,B.q]);
+      }
+    });
+
+    // Če imata sprednji in zadnji 3D rob isto 2D projekcijo, mora polna
+    // vidna črta zmagati. Zato hidden duplicate na isti lokaciji odstranimo.
+    const unique=new Map();
+    hiddenCandidates.forEach(seg=>{
+      const k=voxelEdgeKey2(seg[0],seg[1]);
+      if(visibleProjectedKeys.has(k))return;
+      if(!unique.has(k))unique.set(k,seg);
+    });
+
+    return mergeAxisAlignedSegments2D([...unique.values()]);
+  }
+
+  function voxelHiddenEdges(cubes,bounds,scale,view){
+    const centerA=view==="side" ? bounds.cy : bounds.cx;
+    const centerB=view==="top" ? bounds.cy : bounds.cz;
+
+    return voxelHiddenEdgesGrid(cubes,view).map(seg=>seg.map(([a,b])=>[
+      (a-centerA)*scale,
+      (b-centerB)*scale
+    ]));
+  }
+
+  /*
     PREPARE VOXEL SHAPE
     -------------------
     Tukaj se zgodi pomemben bridge med 3D kockami in 2D projections.
@@ -1585,9 +1917,25 @@
       faces,
       rays,
       projections:{
-        front:{polygons:frontPolys, lines:[], hiddenLines:[]},
-        top:{polygons:topPolys, lines:[], hiddenLines:[]},
-        side:{polygons:sidePolys, lines:[], hiddenLines:[]}
+        // polygons = zapolnitev projekcije / silhouette cells
+        // lines    = DEJANSKI notranji vidni tehniški robovi
+        // hiddenLines za voxel teaching shapes po potrebi še dopolnimo spodaj;
+        // obstoječi ročni primeri za utor / odprtino zato ostanejo kompatibilni.
+        front:{
+          polygons:frontPolys,
+          lines:voxelVisibleInnerEdges(cubes,b,scale,"front"),
+          hiddenLines:voxelHiddenEdges(cubes,b,scale,"front")
+        },
+        top:{
+          polygons:topPolys,
+          lines:voxelVisibleInnerEdges(cubes,b,scale,"top"),
+          hiddenLines:voxelHiddenEdges(cubes,b,scale,"top")
+        },
+        side:{
+          polygons:sidePolys,
+          lines:voxelVisibleInnerEdges(cubes,b,scale,"side"),
+          hiddenLines:voxelHiddenEdges(cubes,b,scale,"side")
+        }
       }
     };
   }
@@ -1790,37 +2138,76 @@
   ];
 
   /*
-    MANUAL HIDDEN EDGES – UTOR
-    --------------------------
-    Pri utoru je treba paziti: nekaj kar je v narisu jasno vidno,
-    je v tlorisu lahko skrito pod zgornjo ploskvijo.
-    Zato te hidden lines dodamo eksplicitno.
+    LEGACY HIDDEN-LINE ANCHORS – zdaj samo QA / fallback
+    ----------------------------------------------------
+    Pred v18 sta imela utor in odprtina nekaj skritih robov ročno vpisanih.
+    Novi voxel engine jih zna izračunati sam. Te stare reference zaenkrat
+    obdržimo kot safety net in jih združimo z avtomatskim rezultatom.
+
+    Zakaj ne samo delete? Ker je to šolska aplikacija: pri refactorju je lepše
+    najprej dokazati, da avtomatika daje isti ali bogatejši rezultat.
+    mergeAxisAlignedSegments2D odstrani duplikate / zlepi kolinearne dele.
   */
-  // Skriti robovi pri predmetu 4 (most z utorom).
-  // V tlorisu je zgornja ploskev polna, utor pod njo pa se zato pokaže
-  // z dvema skritima robovoma notranjih sten.
-  shapes[4].projections.top.hiddenLines = [
+  shapes[4].projections.top.hiddenLines = mergeAxisAlignedSegments2D([
+    ...shapes[4].projections.top.hiddenLines,
     [[-1,-1],[-1,1]],
     [[1,-1],[1,1]]
-  ];
+  ]);
 
-  /*
-    MANUAL HIDDEN EDGES – THROUGH OPENING
-    -------------------------------------
-    Odprtina skozi globino je super primer, ker otroci hitro vidijo,
-    da "luknja obstaja", ampak je v različnih pogledih lahko vidna ali hidden.
-  */
-  // Skriti robovi pri predmetu 5 (okvir z odprtino skozi globino).
-  // Tunel poteka v smeri y. V tlorisu sta njegova bočna robova skrita pod zgornjo ploskvijo,
-  // v stranskem risu z leve pa sta skrita spodnji in zgornji rob odprtine.
-  shapes[5].projections.top.hiddenLines = [
+  shapes[5].projections.top.hiddenLines = mergeAxisAlignedSegments2D([
+    ...shapes[5].projections.top.hiddenLines,
     [[(1-2)*1.0,(0-1.5)*1.0],[(1-2)*1.0,(3-1.5)*1.0]],
     [[(3-2)*1.0,(0-1.5)*1.0],[(3-2)*1.0,(3-1.5)*1.0]]
-  ];
-  shapes[5].projections.side.hiddenLines = [
+  ]);
+  shapes[5].projections.side.hiddenLines = mergeAxisAlignedSegments2D([
+    ...shapes[5].projections.side.hiddenLines,
     [[(0-1.5)*1.0,(1-1.5)*1.0],[(3-1.5)*1.0,(1-1.5)*1.0]],
     [[(0-1.5)*1.0,(2-1.5)*1.0],[(3-1.5)*1.0,(2-1.5)*1.0]]
-  ];
+  ]);
+
+  /*
+    PROJECTION ENGINE SELF-CHECK
+    ----------------------------
+    Tiny regression test za bug, ki ga zdaj popravljamo:
+    - navaden kvader v tlorisu ne sme dobiti fake notranjih robov
+    - stopnice pa MORAJO dobiti notranje vidne robove spremembe višine
+
+    Če kdo čez pol leta "optimizira" projection code in to polomi,
+    console takoj pove, kaj je šlo narobe.
+  */
+  function validateVisibleTechnicalEdges(){
+    const problems=[];
+    if((shapes[1].projections.top.lines || []).length!==0){
+      problems.push("Kvader: tloris ima nepričakovane notranje vidne robove.");
+    }
+    if((shapes[2].projections.top.lines || []).length<2){
+      problems.push("Stopničasti predmet: v tlorisu manjkajo robovi spremembe višine.");
+    }
+    if((shapes[3].projections.top.lines || []).length<1){
+      problems.push("L-predmet: v tlorisu manjka rob spremembe višine.");
+    }
+
+    // v18 regression: stopnice morajo imeti v stranskem risu dve skriti
+    // vodoravni višinski meji. Kvader pa ne sme dobiti fake hidden robov.
+    if((shapes[1].projections.side.hiddenLines || []).length!==0){
+      problems.push("Kvader: stranski ris ima nepričakovane skrite robove.");
+    }
+    if((shapes[2].projections.side.hiddenLines || []).length<2){
+      problems.push("Stopničasti predmet: v stranskem risu manjkajo skriti robovi stopnic.");
+    }
+    if((shapes[4].projections.top.hiddenLines || []).length<2){
+      problems.push("Most z utorom: v tlorisu manjkajo skriti robovi utora.");
+    }
+    if((shapes[5].projections.side.hiddenLines || []).length<2){
+      problems.push("Okvir z odprtino: v stranskem risu manjkajo skriti robovi odprtine.");
+    }
+
+    if(problems.length)console.error("QA tehniških robov:",problems);
+    else console.info("QA tehniških robov: OK (vidni + skriti voxel robovi)." );
+    return problems;
+  }
+
+  validateVisibleTechnicalEdges();
 
   shapes.forEach((s,i)=>{
     const opt = document.createElement("option");
@@ -2415,14 +2802,20 @@
   /*
     DRAW PROJECTION ON ITS PLANE
     ----------------------------
-    Tukaj rišemo:
-    1) fill projekcije
-    2) didaktične cell lines (če so ON)
-    3) technical boundary
-    4) posebne vidne robove
-    5) hidden edges
+    v18 hard rule za layering:
 
-    Order matters. Če hidden line narišeš prezgodaj, jo fill poje.
+      1) fill projekcije
+      2) didaktična cell mreža (samo če je ON)
+      3) skriti robovi (če so vključeni)
+      4) ZUNANJI vidni tehniški rob
+      5) NOTRANJI vidni tehniški robovi
+
+    Zakaj hidden rišemo PRED visible?
+    Ker se lahko zadnji 3D rob projicira točno na isto 2D črto kot sprednji.
+    V tehniški risbi mora takrat polna vidna črta zmagati nad črtkano.
+
+    Didaktična mreža pa je še vedno spodaj: nikoli ne sme prekriti
+    dejanskega tehniškega roba.
   */
   function drawProjection(type, cam, alpha){
     if(alpha < 0.01) return;
@@ -2430,6 +2823,7 @@
     const proj = shape.projections[type] || {polygons:[],lines:[],hiddenLines:[]};
     const fill = type==="front" ? COLORS.projFront : type==="top" ? COLORS.projTop : COLORS.projSide;
 
+    // 1 + 2: fill in po želji zelo nežna didaktična delitev celic.
     (proj.polygons || []).forEach(poly2 => {
       if(!Array.isArray(poly2) || poly2.length < 3 || !poly2.every(validPoint2)){
         console.warn("Neveljaven projekcijski poligon:", shape.name, type, poly2);
@@ -2441,40 +2835,14 @@
           .map(p=>planeTransform(type,p)),
         cam,
         fill,
-        state.didacticGrid ? "rgba(245,247,248,.88)" : "rgba(0,0,0,0)",
-        state.didacticGrid ? 0.9 : 0,
+        state.didacticGrid ? PROJECTION_STYLE.didacticGrid.color : "rgba(0,0,0,0)",
+        state.didacticGrid ? PROJECTION_STYLE.didacticGrid.width : 0,
         alpha
       );
     });
 
-    // Brez didaktične mreže odstranimo meje med posameznimi kockami.
-    // Ohranimo samo tehnično pomemben obris projekcije.
-    if(!state.didacticGrid){
-      technicalProjectionBoundaryEdges(proj.polygons || []).forEach(seg=>{
-        const a3=projection3DPointLaidOut(type,seg[0]);
-        const b3=projection3DPointLaidOut(type,seg[1]);
-        drawLine3(
-          planeTransform(type,a3), planeTransform(type,b3),
-          cam, "rgba(37,54,64,.96)", 1.55, alpha
-        );
-      });
-    }
-
-    // Vidni značilni robovi – polna tehnična črta.
-    (proj.lines || []).forEach(seg => {
-      if(!validSegment2(seg)){
-        console.warn("Neveljaven vidni rob:", shape.name, type, seg);
-        return;
-      }
-      const a3 = projection3DPointLaidOut(type,seg[0]);
-      const b3 = projection3DPointLaidOut(type,seg[1]);
-      drawLine3(
-        planeTransform(type,a3), planeTransform(type,b3),
-        cam, "rgba(37,54,64,.92)", 1.45, alpha
-      );
-    });
-
-    // Skriti robovi – črtkana črta. Prikaz je mogoče izklopiti.
+    // 3: skriti robovi. Pri voxel predmetih jih od v18 generira engine,
+    // custom shape 6/7 pa lahko še vedno poda svoje ročne hiddenLines.
     if(hiddenEdgesToggle.checked){
       (proj.hiddenLines || []).forEach(seg => {
         if(!validSegment2(seg)){
@@ -2485,10 +2853,46 @@
         const b3 = projection3DPointLaidOut(type,seg[1]);
         drawLine3(
           planeTransform(type,a3), planeTransform(type,b3),
-          cam, COLORS.hiddenEdge, 1.15, alpha, [7,5]
+          cam,
+          PROJECTION_STYLE.hiddenEdge.color,
+          PROJECTION_STYLE.hiddenEdge.width,
+          alpha,
+          PROJECTION_STYLE.hiddenEdge.dash
         );
       });
     }
+
+    // 4: zunanji / through-hole silhouette boundary je PRAVI vidni tehniški rob.
+    technicalProjectionBoundaryEdges(proj.polygons || []).forEach(seg=>{
+      const a3=projection3DPointLaidOut(type,seg[0]);
+      const b3=projection3DPointLaidOut(type,seg[1]);
+      drawLine3(
+        planeTransform(type,a3), planeTransform(type,b3),
+        cam,
+        PROJECTION_STYLE.outerEdge.color,
+        PROJECTION_STYLE.outerEdge.width,
+        alpha,
+        PROJECTION_STYLE.outerEdge.dash
+      );
+    });
+
+    // 5: notranji vidni tehniški robovi - npr. sprememba višine stopnic.
+    (proj.lines || []).forEach(seg => {
+      if(!validSegment2(seg)){
+        console.warn("Neveljaven vidni rob:", shape.name, type, seg);
+        return;
+      }
+      const a3 = projection3DPointLaidOut(type,seg[0]);
+      const b3 = projection3DPointLaidOut(type,seg[1]);
+      drawLine3(
+        planeTransform(type,a3), planeTransform(type,b3),
+        cam,
+        PROJECTION_STYLE.visibleEdge.color,
+        PROJECTION_STYLE.visibleEdge.width,
+        alpha,
+        PROJECTION_STYLE.visibleEdge.dash
+      );
+    });
   }
 
   /*
@@ -2503,11 +2907,28 @@
     if(!showObjectToggle.checked || s.rays.length === 0) return;
     const fade = 1 - state.unfold;
     if(fade < 0.02) return;
+
+    // TABLE / SMART BOARD TUNING
+    // --------------------------
+    // Projekcijski žarki morajo ostati vidni, ampak ne smejo tekmovati
+    // s hidden edges. Zato jih tukaj namensko narišemo: 
+    // - svetlejše
+    // - tanjše
+    // - bolj transparentno
+    // - z daljšim razmakom v dash vzorcu
+    // Hidden edge tako na tabli ostane jasno "močnejši signal".
+    // V21: uporabnik je želel MOČNO bolj vidne žarke, zato jih tukaj precej
+    // ojačamo, ampak jih še vedno ločimo od skritih robov po barvi in dash vzorcu.
+    const rayWidth = 1.15;
+    const rayDash = [6,6];
+    const frontAlpha = fade * 0.88;
+    const sideAlpha = fade * 0.72;
+
     const pts = s.rays.map(shiftObjectPoint);
     pts.forEach(p=>{
-      if(state.projectionAlpha.front > 0.04) drawLine3(p, [p[0],D,p[2]], cam, COLORS.ray, 1, fade*0.85, [5,4]);
-      if(state.projectionAlpha.top > 0.04) drawLine3(p, [p[0],p[1],-D], cam, COLORS.ray, 1, fade*0.72, [5,4]);
-      if(state.projectionAlpha.side > 0.04) drawLine3(p, [D,p[1],p[2]], cam, COLORS.ray, 1, fade*0.72, [5,4]);
+      if(state.projectionAlpha.front > 0.04) drawLine3(p, [p[0],D,p[2]], cam, COLORS.ray, rayWidth, frontAlpha, rayDash);
+      if(state.projectionAlpha.top > 0.04) drawLine3(p, [p[0],p[1],-D], cam, COLORS.ray, rayWidth, sideAlpha, rayDash);
+      if(state.projectionAlpha.side > 0.04) drawLine3(p, [D,p[1],p[2]], cam, COLORS.ray, rayWidth, sideAlpha, rayDash);
     });
   }
 
@@ -2706,10 +3127,20 @@
     dragging:false,
     lastX:0,
     lastY:0,
-    view:"3d"
+    view:"3d",
+
+    // Projection analysis je precej pametnejši kot prej, zato ga ne računamo
+    // znova 60x na sekundo, če se model ni spremenil.
+    projectionRevision:0
   };
 
   function builderKey(x,y,z){ return `${x},${y},${z}`; }
+
+  const builderProjectionCache=new Map();
+  function markBuilderGeometryChanged(){
+    builderState.projectionRevision++;
+    builderProjectionCache.clear();
+  }
 
 
   /*
@@ -2770,6 +3201,7 @@
     builderMode=next;
     builderState.cells.clear();
     builderState.history=[];
+    markBuilderGeometryChanged();
     builderState.layer=0;
     builderStudentName.value="";
     builderModelName.value="moje_telo";
@@ -2795,6 +3227,7 @@
     const prev=builderState.history.pop();
     if(!prev)return;
     builderState.cells=prev;
+    markBuilderGeometryChanged();
     renderLayerGrid();
     updateBuilderStatus("Zadnja sprememba je razveljavljena.");
   }
@@ -2889,6 +3322,7 @@
       builderState.cells.delete(k);
     }
 
+    markBuilderGeometryChanged();
     renderLayerGrid();
     updateBuilderStatus();
   }
@@ -2966,6 +3400,7 @@
     if(hadGeometry)pushBuilderHistory();
 
     builderState.cells.clear();
+    markBuilderGeometryChanged();
 
     // Ime velja samo za konkretni .tehnikamodel.
     // "Počisti" pomeni nov začetek, zato ime izgine.
@@ -3005,6 +3440,7 @@
     add(0,1,2,{kind:"cut",dir:"xp"});
     add(3,1,2,{kind:"cut",dir:"xn"});
 
+    markBuilderGeometryChanged();
     renderLayerGrid();
     updateBuilderStatus("Naložen je primer z odprtino in dvema rezoma.");
   }
@@ -3240,6 +3676,7 @@
     // mode must not leak into the loaded model.
     builderState.history=[];
     builderState.cells=next;
+    markBuilderGeometryChanged();
 
     builderModelName.value=
       (typeof data.modelName==="string" && data.modelName.trim())
@@ -4244,8 +4681,8 @@
       }
     });
 
-    // Shared edges occur twice and disappear. What remains is the visible
-    // outer/inner boundary, including through-holes and diagonal cut edges.
+    // Shared edges occur twice and disappear. What remains is the exact
+    // silhouette / through-hole boundary, including diagonal cut boundaries.
     const edges=[];
     counts.forEach((count,k)=>{
       if(count!==1)return;
@@ -4255,6 +4692,346 @@
         s2.split(",").map(Number)
       ]);
     });
+    return edges;
+  }
+
+  /*
+    BUILDER VISIBLE-SURFACE RAYCAST (restricted, but exact for our primitives)
+    -------------------------------------------------------------------------
+    Stari builder je projection cell samo "sesul" po smeri pogleda.
+    To je super za fill / silhouette, premalo pa za TEHNIŠKE robove.
+
+    Zdaj lahko za poljubno 2D točko vprašamo:
+      - ali tam sploh vidimo telo?
+      - katera 3D površina je najbližje opazovalcu?
+      - na kateri globini je?
+      - kakšen tip / normalo ima vidna površina?
+
+    Ker dovolimo samo full cube + X+/X-/Y+/Y- wedge, ne rabimo WebGL raytracerja.
+    Te enačbe so majhne in deterministic.
+  */
+  function builderVisibleSignature(view,u,v){
+    const n=builderMode.n;
+    const EPS=1e-8;
+
+    if(u<=0 || v<=0 || u>=n || v>=n){
+      // Ta helper se uporablja s točkami tik znotraj celic. Zunanji outline
+      // dobimo iz exact polygon boundary logike, zato zunaj mreže vrnemo null.
+      return null;
+    }
+
+    const a=Math.floor(u);
+    const b=Math.floor(v);
+    const fu=u-a;
+    const fv=v-b;
+    let best=null;
+
+    function consider(depth,normalKey){
+      if(!Number.isFinite(depth))return;
+      if(best===null){
+        best={depth,normalKey};
+        return;
+      }
+      const nearer=view==="top" ? depth>best.depth : depth<best.depth;
+      if(nearer)best={depth,normalKey};
+    }
+
+    if(view==="top"){
+      // u=x, v=y, ray gre od +z navzdol. Iščemo največji top height.
+      for(let z=0;z<n;z++){
+        const cell=builderState.cells.get(builderKey(a,b,z));
+        if(!cell)continue;
+
+        let h=1,normalKey="top-flat";
+        if(cell.kind==="cut"){
+          if(cell.dir==="xp"){ h=fu; normalKey="slope-xp"; }
+          else if(cell.dir==="xn"){ h=1-fu; normalKey="slope-xn"; }
+          else if(cell.dir==="yp"){ h=fv; normalKey="slope-yp"; }
+          else { h=1-fv; normalKey="slope-yn"; }
+        }
+
+        // Na povsem nizkem wedge robu ni površine z merljivo površino.
+        if(h>EPS)consider(z+h,normalKey);
+      }
+      return best;
+    }
+
+    if(view==="front"){
+      // u=x, v=z, kamera je na -y in gleda proti +y.
+      const x=a,z=b,fx=fu,fz=fv;
+      for(let y=0;y<n;y++){
+        const cell=builderState.cells.get(builderKey(x,y,z));
+        if(!cell)continue;
+
+        if(cell.kind==="full"){
+          consider(y,"front-flat");
+          continue;
+        }
+
+        if(cell.dir==="xp"){
+          if(fz<=fx+EPS)consider(y,"front-flat");
+        }else if(cell.dir==="xn"){
+          if(fz<=1-fx+EPS)consider(y,"front-flat");
+        }else if(cell.dir==="yp"){
+          // solid: zLocal <= yLocal -> first hit is the slope at yLocal=zLocal
+          if(fz<=1+EPS)consider(y+fz,"slope-yp");
+        }else{
+          // yn is high at y=0, zato prednja ravna ploskev ostane nearest face.
+          if(fz<=1+EPS)consider(y,"front-flat");
+        }
+      }
+      return best;
+    }
+
+    // side: u=y, v=z, kamera je na -x in gleda proti +x.
+    const y=a,z=b,fy=fu,fz=fv;
+    for(let x=0;x<n;x++){
+      const cell=builderState.cells.get(builderKey(x,y,z));
+      if(!cell)continue;
+
+      if(cell.kind==="full"){
+        consider(x,"side-flat");
+        continue;
+      }
+
+      if(cell.dir==="yp"){
+        if(fz<=fy+EPS)consider(x,"side-flat");
+      }else if(cell.dir==="yn"){
+        if(fz<=1-fy+EPS)consider(x,"side-flat");
+      }else if(cell.dir==="xp"){
+        // solid: zLocal <= xLocal -> first hit is slope xLocal=zLocal
+        if(fz<=1+EPS)consider(x+fz,"slope-xp");
+      }else{
+        // xn is high at x=0 -> ravna leva ploskev je nearest face.
+        if(fz<=1+EPS)consider(x,"side-flat");
+      }
+    }
+    return best;
+  }
+
+  function builderTechnicalTransition(sigA,sigB){
+    // Silhueto že dobimo exact iz projectionBoundaryEdges().
+    // Tukaj nas zanimajo samo notranji tehniški robovi med DVEMA vidnima površinama.
+    if(!sigA || !sigB)return false;
+
+    if(sigA.normalKey!==sigB.normalKey)return true;
+
+    // Same normal + practically same depth = ista ravnina -> samo grid seam.
+    // Večja globinska razlika = stopnica / zamik -> pravi tehniški rob.
+    return Math.abs(sigA.depth-sigB.depth)>0.012;
+  }
+
+  function sampledTransitionSegments(view,p0,p1,offsetDir,subdivisions=16){
+    const EPS=0.0007;
+    const out=[];
+    let runStart=null;
+
+    function pointAt(t){
+      return [
+        p0[0]+(p1[0]-p0[0])*t,
+        p0[1]+(p1[1]-p0[1])*t
+      ];
+    }
+
+    for(let i=0;i<subdivisions;i++){
+      const t0=i/subdivisions;
+      const t1=(i+1)/subdivisions;
+      const tm=(t0+t1)/2;
+      const p=pointAt(tm);
+
+      const a=[p[0]+offsetDir[0]*EPS,p[1]+offsetDir[1]*EPS];
+      const b=[p[0]-offsetDir[0]*EPS,p[1]-offsetDir[1]*EPS];
+      const active=builderTechnicalTransition(
+        builderVisibleSignature(view,a[0],a[1]),
+        builderVisibleSignature(view,b[0],b[1])
+      );
+
+      if(active && runStart===null)runStart=t0;
+      if(!active && runStart!==null){
+        out.push([pointAt(runStart),pointAt(t0)]);
+        runStart=null;
+      }
+    }
+
+    if(runStart!==null)out.push([pointAt(runStart),pointAt(1)]);
+    return out;
+  }
+
+  /*
+    FAST PATH FOR BUILDER MODELS MADE ONLY OF FULL CUBES
+    ----------------------------------------------------
+    Večina učencev bo velik del časa gradila samo s kockami. Tak model ne
+    potrebuje sampled raycasta - lahko uporabimo isti exact depth-profile
+    princip kot pri teaching shapes. To je pomembno predvsem pri 10×10×10.
+  */
+  function computeBuilderFullCubeInnerEdges(view){
+    const profile=new Map();
+
+    function put(a,b,depth){
+      const k=`${a},${b}`;
+      if(!profile.has(k)){
+        profile.set(k,{a,b,depth});
+        return;
+      }
+      const old=profile.get(k);
+      if(view==="top"){
+        if(depth>old.depth)old.depth=depth;
+      }else if(depth<old.depth){
+        old.depth=depth;
+      }
+    }
+
+    builderState.cells.forEach((cell,key)=>{
+      const [x,y,z]=key.split(",").map(Number);
+      if(view==="top")put(x,y,z+1);
+      else if(view==="front")put(x,z,y);
+      else put(y,z,x);
+    });
+
+    const edges=[];
+    profile.forEach(cell=>{
+      const right=profile.get(`${cell.a+1},${cell.b}`);
+      if(right && right.depth!==cell.depth){
+        edges.push([[cell.a+1,cell.b],[cell.a+1,cell.b+1]]);
+      }
+      const up=profile.get(`${cell.a},${cell.b+1}`);
+      if(up && up.depth!==cell.depth){
+        edges.push([[cell.a,cell.b+1],[cell.a+1,cell.b+1]]);
+      }
+    });
+    return edges;
+  }
+
+  function builderProjectionColumnHasDiagonalCut(view,a,b){
+    if(view==="top")return false;
+
+    if(view==="front"){
+      for(let y=0;y<builderMode.n;y++){
+        const c=builderState.cells.get(builderKey(a,y,b));
+        if(c && c.kind==="cut" && (c.dir==="xp" || c.dir==="xn"))return true;
+      }
+      return false;
+    }
+
+    for(let x=0;x<builderMode.n;x++){
+      const c=builderState.cells.get(builderKey(x,a,b));
+      if(c && c.kind==="cut" && (c.dir==="yp" || c.dir==="yn"))return true;
+    }
+    return false;
+  }
+
+
+  /*
+    BUILDER HIDDEN EDGES – v18
+    --------------------------
+    Za model, sestavljen samo iz FULL kock, lahko uporabimo isti exact voxel
+    hidden-edge engine kot v učnem delu. Ko so prisotni CUT gradniki, hidden
+    edge namenoma še ne ugibamo: pri poševnih ploskvah bi napačna črtkana
+    diagonala učenca naučila več narobe kot manjkajoča napredna funkcija.
+
+    Visible cut edges iz v17 ostanejo popolnoma aktivni.
+  */
+  function computeBuilderHiddenEdges(view){
+    const cacheKey=`hidden|${builderState.projectionRevision}|${builderMode.id}|${view}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    if(builderState.cells.size===0){
+      builderProjectionCache.set(cacheKey,[]);
+      return [];
+    }
+
+    const hasCuts=[...builderState.cells.values()].some(c=>c.kind==="cut");
+    if(hasCuts){
+      builderProjectionCache.set(cacheKey,[]);
+      return [];
+    }
+
+    const cubes=[];
+    builderState.cells.forEach((cell,key)=>{
+      const [x,y,z]=key.split(",").map(Number);
+      cubes.push([x,y,z]);
+    });
+
+    const hidden=voxelHiddenEdgesGrid(cubes,view);
+    builderProjectionCache.set(cacheKey,hidden);
+    return hidden;
+  }
+
+  /*
+    BUILDER INNER TECHNICAL EDGES
+    -----------------------------
+    Candidate locations so pri naših restricted primitives zelo obvladljive:
+      A) meje med grid celicami
+      B) obe diagonali vsake projection celice
+
+    Zakaj tudi diagonali?
+    Primer: spredaj je cut wedge, za njim pa še material. Silhueta je lahko
+    cel kvadrat, ampak meja med bližnjim klinom in bolj oddaljeno površino
+    je še vedno viden diagonalni TEHNIŠKI rob.
+
+    Sampling ne določa silhuete - ta ostane exact polygon math.
+    Sampling samo klasificira, ali je kandidat pravi vidni rob ali le seam.
+  */
+  function computeBuilderVisibleInnerEdges(view){
+    const cacheKey=`${builderState.projectionRevision}|${builderMode.id}|${view}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    const n=builderMode.n;
+
+    const hasCuts=[...builderState.cells.values()].some(c=>c.kind==="cut");
+    if(!hasCuts){
+      const fast=computeBuilderFullCubeInnerEdges(view);
+      builderProjectionCache.set(cacheKey,fast);
+      return fast;
+    }
+
+    const edges=[];
+
+    // Vertikalne grid meje a = integer.
+    for(let a=1;a<n;a++){
+      for(let b=0;b<n;b++){
+        edges.push(...sampledTransitionSegments(
+          view,
+          [a,b],[a,b+1],
+          [1,0]
+        ));
+      }
+    }
+
+    // Horizontalne grid meje b = integer.
+    for(let b=1;b<n;b++){
+      for(let a=0;a<n;a++){
+        edges.push(...sampledTransitionSegments(
+          view,
+          [a,b],[a+1,b],
+          [0,1]
+        ));
+      }
+    }
+
+    // Diagonali znotraj unit projection cell preverjamo samo tam, kjer
+    // je v tem projection columnu cut, ki se v danem pogledu sploh projicira
+    // diagonalno. To precej zmanjša delo v advanced 10×10×10 načinu.
+    // Perpendicular offset je normaliziran samo približno; EPS je tako majhen,
+    // da √2 faktor nima didaktičnega ali geometrijskega pomena.
+    for(let a=0;a<n;a++){
+      for(let b=0;b<n;b++){
+        if(!builderProjectionColumnHasDiagonalCut(view,a,b))continue;
+
+        edges.push(...sampledTransitionSegments(
+          view,
+          [a,b],[a+1,b+1],
+          [1,-1]
+        ));
+        edges.push(...sampledTransitionSegments(
+          view,
+          [a,b+1],[a+1,b],
+          [1,1]
+        ));
+      }
+    }
+
+    builderProjectionCache.set(cacheKey,edges);
     return edges;
   }
 
@@ -4303,8 +5080,8 @@
 
     // 1 projekcijska celica = 1 glavno mrežno polje = 1 rob kocke.
     // Med glavna polja dodamo še polovične pomožne črte.
-    pctx.strokeStyle="rgba(47,78,95,.08)";
-    pctx.lineWidth=0.8;
+    pctx.strokeStyle="rgba(47,78,95,.075)";
+    pctx.lineWidth=0.72;
     for(let x=ox%(scale/2);x<r.width;x+=scale/2){
       pctx.beginPath();pctx.moveTo(x,0);pctx.lineTo(x,r.height);pctx.stroke();
     }
@@ -4312,8 +5089,8 @@
       pctx.beginPath();pctx.moveTo(0,y);pctx.lineTo(r.width,y);pctx.stroke();
     }
 
-    pctx.strokeStyle="rgba(47,78,95,.22)";
-    pctx.lineWidth=1.35;
+    pctx.strokeStyle="rgba(110,132,145,.34)";
+    pctx.lineWidth=0.95;
     for(let x=ox%scale;x<r.width;x+=scale){
       pctx.beginPath();pctx.moveTo(x,0);pctx.lineTo(x,r.height);pctx.stroke();
     }
@@ -4339,7 +5116,9 @@
     function drawView(view){
       const cfg=configs[view];
       const polys=projectionPolygons(view);
-      const edges=projectionBoundaryEdges(view);
+      const outerEdges=projectionBoundaryEdges(view);
+      const visibleInnerEdges=computeBuilderVisibleInnerEdges(view);
+      const hiddenEdges=computeBuilderHiddenEdges(view);
 
       // Calculate bounds in unit coordinates. Empty model still gets labels.
       const all=polys.flat();
@@ -4371,13 +5150,37 @@
         pctx.closePath();pctx.fill();
       });
 
-      pctx.strokeStyle="#20343f";
-      pctx.lineWidth=2.0;
-      pctx.lineCap="square";
-      edges.forEach(([a,b])=>{
+      // SKRITI robovi naj gredo POD vidne. Če se črtkana in polna črta
+      // projicirata na isto mesto, mora polna tehniška črta zmagati.
+      pctx.strokeStyle=PROJECTION_STYLE.hiddenEdge.color;
+      pctx.lineWidth=PROJECTION_STYLE.hiddenEdge.width;
+      pctx.setLineDash(PROJECTION_STYLE.hiddenEdge.dash);
+      hiddenEdges.forEach(([a,b])=>{
         const A=mapPt(a),B=mapPt(b);
         pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
       });
+
+      // ZUNANJI tehniški obris - najmočnejša črta.
+      // Rišemo ga čez fill, sheet grid IN hidden lines.
+      pctx.strokeStyle=PROJECTION_STYLE.outerEdge.color;
+      pctx.lineWidth=PROJECTION_STYLE.outerEdge.width;
+      pctx.setLineDash(PROJECTION_STYLE.outerEdge.dash);
+      pctx.lineCap="square";
+      outerEdges.forEach(([a,b])=>{
+        const A=mapPt(a),B=mapPt(b);
+        pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
+      });
+
+      // NOTRANJI vidni tehniški robovi - malo tanjši od silhuete, ampak
+      // še vedno bistveno temnejši / debelejši od didaktične mreže.
+      pctx.strokeStyle=PROJECTION_STYLE.visibleEdge.color;
+      pctx.lineWidth=PROJECTION_STYLE.visibleEdge.width;
+      pctx.setLineDash(PROJECTION_STYLE.visibleEdge.dash);
+      visibleInnerEdges.forEach(([a,b])=>{
+        const A=mapPt(a),B=mapPt(b);
+        pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
+      });
+      pctx.setLineDash([]);
 
       // View label near, but not on top of drawing.
       pctx.fillStyle="#31566a";
@@ -4614,11 +5417,12 @@
   /*
     DIDACTIC GRID TOGGLE
     --------------------
-    ON  = učenec vidi, iz katerih kock/celic je projection sestavljena.
-    OFF = odstranimo notranje cell seams in pustimo technical outline.
+    ON  = učenec vidi pomožno cell mrežo + VEDNO tudi prave tehniške robove.
+    OFF = pomožno cell mrežo odstranimo; pravi tehniški robovi ostanejo isti.
 
-    Pomembno: to ni "correct / incorrect" switch.
-    Obe stanji sta namerno uporabni, samo za drug didaktični trenutek.
+    Pomembno: ta gumb od v17 naprej spreminja samo TEACHING SCAFFOLD.
+    v18 je enako: visible/hidden tehniški robovi so geometrija, ne mreža.
+    Ne sme več spreminjati tega, kateri robovi geometrije so vidni.
   */
   didacticGridBtn.addEventListener("click", ()=>{
     state.didacticGrid=!state.didacticGrid;
