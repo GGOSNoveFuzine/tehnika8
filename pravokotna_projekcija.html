@@ -43,6 +43,25 @@
   Builder dobi isto logiko za modele iz polnih kock; cut hidden-edge klasifikacija
   ostane ločen naslednji korak, da ne bi risali napačnih črtkanih diagonal.
 
+  v19: CUT hidden-edge engine najprej združi poševne površine v dejansko
+  geometrijo predmeta: koplanarni šivi med sosednjimi rezanimi gradniki izginejo,
+  pravi pregibi in meje ostanejo, kolinearni deli istega roba pa se združijo.
+  Šele nato se rob razvrsti na vidni ali skriti del.
+
+  v20: mixed FULL+CUT hidden-edge popravek. CUT kjerkoli v modelu ne sme več
+  globalno izklopiti skritih robov polnih gradnikov. Novi axis-feature pass
+  poišče tudi konkavne skrite robove odprtin in podvisov iz dejanske lokalne
+  zasedenosti materiala; v19 CUT seam cleanup ostane nespremenjen.
+
+  v21: axis-feature CUT seam filter. v20 odprtine/podvisi ostanejo, vendar
+  mrežni rob, ki je samo stik dveh koplanarnih poševnih CUT ploskev, ni več
+  kandidat za skrito črto. To odstrani lažno vodoravno črtkano črto v
+  stranskem risu V-prizme, ne da bi odstranilo skrite robove klopi/mostu/stola.
+
+  oddaja učitelju: dodan neposreden POST v Google Apps Script. Za prvo
+  različico brez CAPTCHA; posamezen brskalnik ima 60-sekundni cooldown.
+  Projekcijska in builder geometrija ostaneta nespremenjeni.
+
   Če boš karkoli spreminjal:
   - najprej poglej kaj učenec vidi,
   - potem kaj lahko klikne / premakne,
@@ -646,6 +665,24 @@
     min-height:0;
     overflow:hidden;
   }
+  /*
+    ENOTNI DELOVNI POGLED
+    ---------------------
+    3D in pravokotna projekcija nista več dva načina. Oba sta sinhronizirana
+    pogleda istega telesa. Privzeto projekcije ohranijo celoten prostor, 3D pa
+    uporabi prazen spodnji desni kvadrant razgrnitve.
+  */
+  .builder-projection-pane,
+  .builder-3d-pane{
+    position:absolute;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
+    transition:left .18s ease,right .18s ease,top .18s ease,bottom .18s ease,width .18s ease,height .18s ease;
+  }
+  .builder-projection-pane{display:none;z-index:1;background:#f8fafb}
+  .builder-3d-pane{display:none;z-index:4;background:#eef2f4;border:1px solid #71838e}
+
   #builderCanvas,
   #projectionCanvas{
     position:absolute;
@@ -654,16 +691,79 @@
     height:100%;
     touch-action:none;
   }
-  #projectionCanvas{display:none;background:#f8fafb}
-  .builder-stage.projection-mode #builderCanvas{display:none}
-  .builder-stage.projection-mode #projectionCanvas{display:block}
+  #projectionCanvas{background:#f8fafb;pointer-events:none}
+  #builderCanvas{background:#eef2f4;pointer-events:auto}
+
+  .builder-stage.show-projection .builder-projection-pane{display:block}
+  .builder-stage.show-3d .builder-3d-pane{display:block}
+
+  .builder-stage.show-projection:not(.show-3d) .builder-projection-pane{inset:0}
+  .builder-stage.show-3d:not(.show-projection) .builder-3d-pane{
+    inset:0;border:0;box-shadow:none
+  }
+
+  /* Privzeto: projekcije velike, 3D v praznem spodnjem desnem kvadrantu. */
+  .builder-stage.show-projection.show-3d.layout-projection .builder-projection-pane{inset:0}
+  .builder-stage.show-projection.show-3d.layout-projection .builder-3d-pane{
+    left:50.6%;top:50.6%;right:8px;bottom:8px;
+    box-shadow:-2px -2px 8px rgba(0,0,0,.12);
+    border-width:1px 0 0 1px;
+  }
+
+  /* Enako: oba prikaza drug ob drugem. */
+  .builder-stage.show-projection.show-3d.layout-equal .builder-projection-pane{
+    left:0;top:0;bottom:0;width:50%;
+  }
+  .builder-stage.show-projection.show-3d.layout-equal .builder-3d-pane{
+    left:50%;top:0;right:0;bottom:0;
+    border-width:0 0 0 2px;
+    box-shadow:-2px 0 7px rgba(0,0,0,.10);
+  }
+
+  /* 3D večje: 3D dobi 62 %, projekcije pa ostanejo uporabne na desni. */
+  .builder-stage.show-projection.show-3d.layout-3d .builder-3d-pane{
+    left:0;top:0;bottom:0;width:62%;border:0;box-shadow:none;
+  }
+  .builder-stage.show-projection.show-3d.layout-3d .builder-projection-pane{
+    left:62%;top:0;right:0;bottom:0;border-left:2px solid #71838e;
+  }
+
+  .builder-pane-chip{
+    position:absolute;z-index:8;top:10px;right:10px;
+    padding:6px 8px;border:1px solid rgba(86,105,116,.65);
+    background:rgba(246,248,249,.92);color:#36576a;
+    font-size:10px;line-height:1.2;font-weight:900;letter-spacing:.10em;
+    text-transform:uppercase;pointer-events:none;
+  }
+
+  .builder-layout-preset{
+    display:flex;align-items:stretch;gap:4px;padding:3px;
+    border:1px solid #9aa7af;background:#dde4e8;
+  }
+  .builder-layout-preset button{
+    min-height:36px;padding-inline:10px;font-size:12px;
+  }
+  .builder-layout-preset button:disabled{opacity:.45;cursor:default}
+
+  .builder-stage.layout-projection.show-projection.show-3d .builder-rotate-pad{
+    transform:scale(.82);transform-origin:left bottom;
+  }
+
+  @media (max-width:1050px){
+    .builder-stage.show-projection.show-3d.layout-projection .builder-3d-pane{
+      left:50.8%;top:50.8%;right:5px;bottom:5px;
+    }
+    .builder-stage.show-projection.show-3d.layout-3d .builder-3d-pane{width:58%}
+    .builder-stage.show-projection.show-3d.layout-3d .builder-projection-pane{left:58%}
+    .builder-layout-preset button{padding-inline:7px;font-size:11px}
+  }
 
   .builder-stage-head{
     position:absolute;
     z-index:6;
     left:12px;
     top:12px;
-    max-width:min(620px,70%);
+    max-width:min(260px,34%);
     padding:8px 10px;
     background:rgba(246,248,249,.94);
     border:1px solid #89979f;
@@ -678,9 +778,9 @@
   .builder-stage-head span{
     display:block;
     margin-top:3px;
-    font-size:12px;
+    font-size:11px;
     color:#53636c;
-    line-height:1.35;
+    line-height:1.3;
   }
 
   .builder-side{
@@ -712,16 +812,36 @@
     text-align:center;
     min-height:54px;
   }
+  .cut-family{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    margin-bottom:7px;
+  }
+  .cut-family button{
+    min-height:38px;
+    padding:5px 6px;
+    text-align:center;
+    font-size:11px;
+    line-height:1.15;
+    font-weight:800;
+  }
   .cut-directions{
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:6px;
   }
   .cut-directions button{
-    min-height:52px;
+    min-height:46px;
     text-align:center;
     font-family:Consolas,monospace;
-    font-size:18px;
+    font-size:17px;
+  }
+  .builder-mode-actions button{
+    font-size:13px;
+    line-height:1.15;
+    min-height:44px;
+    padding:7px 6px;
   }
   .layer-row{
     display:grid;
@@ -772,6 +892,19 @@
       linear-gradient(#b7c5cc,#91a8b3);
     color:#143041;
   }
+
+  /* Referenčni pas ob oseh.
+     Ni del modela in nima koordinat v .tehnikamodel datoteki. */
+  .layer-cell.reference{
+    background:#c7d1d7;
+    border-color:#71838e;
+    box-shadow:inset 0 0 0 1px rgba(40,70,85,.08);
+    cursor:default;
+  }
+  .layer-cell.reference:hover{
+    outline:none;
+  }
+
   .layer-cell:hover{
     outline:3px solid rgba(39,91,122,.22);
     outline-offset:-3px;
@@ -802,9 +935,76 @@
   }
   .builder-status b{color:#244f67}
 
+  /*
+    WHOLE-OBJECT 90° ROTATION PAD
+    -----------------------------
+    Fiksni gumbi so namenoma na odru (spodaj levo), ne v desnem panelu.
+    Učenec tako obrača CELO telo kot en kos, tudi če je sestavljeno iz več
+    nepovezanih delov. Po obratu ostane v 3D pogledu; telo se pripne na mrežo
+    in kot celota prestavi čim bliže koordinati 0,0,0.
+  */
+  .builder-rotate-pad{
+    position:absolute;
+    z-index:9;
+    left:14px;
+    bottom:14px;
+    width:214px;
+    padding:9px 10px 8px;
+    background:rgba(246,248,249,.95);
+    border:1px solid #71838e;
+    box-shadow:0 2px 5px rgba(0,0,0,.14);
+    user-select:none;
+  }
+  .builder-rotate-pad .rotate-title{
+    margin-bottom:6px;
+    font-size:10px;
+    line-height:1.2;
+    font-weight:900;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    color:#36586a;
+    text-align:center;
+  }
+  .builder-rotate-cross{
+    display:grid;
+    grid-template-columns:repeat(3,58px);
+    grid-template-rows:repeat(3,42px);
+    gap:4px;
+    justify-content:center;
+    align-items:center;
+  }
+  .builder-rotate-cross button{
+    min-width:0;
+    width:58px;
+    height:42px;
+    padding:0;
+    display:grid;
+    place-items:center;
+    font-size:22px;
+    line-height:1;
+    font-weight:900;
+    text-align:center;
+  }
+  .builder-rotate-cross .rotate-reset{
+    font-size:12px;
+    letter-spacing:.02em;
+  }
+  .builder-rotate-pad .rotate-note{
+    margin-top:5px;
+    font-size:10px;
+    line-height:1.25;
+    color:#53636c;
+    text-align:center;
+  }
+  .builder-rotate-pad button:focus-visible{
+    outline:3px solid rgba(39,91,122,.28);
+    outline-offset:1px;
+  }
+
   @media(max-width:1000px){
     .builder-main{grid-template-columns:1fr;grid-template-rows:58vh auto}
     .builder-side{max-height:none}
+    .builder-rotate-pad{left:10px;bottom:10px;transform:scale(.92);transform-origin:left bottom}
   }
 
 
@@ -836,6 +1036,23 @@
     color:#172630;
     font-weight:700;
   }
+  .builder-submit-box{
+    margin-top:3px;padding-top:9px;border-top:1px solid #aab5bc;
+    display:grid;gap:7px;
+  }
+  .builder-submit-btn{
+    min-height:50px!important;grid-column:1/-1;text-align:center!important;
+    font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+    border-color:#3f6d56;background:linear-gradient(#f8fbf8,#dce9df);
+  }
+  .builder-submit-btn:hover{background:linear-gradient(#ffffff,#d3e4d7)}
+  .builder-submit-btn:disabled{opacity:.68;cursor:not-allowed}
+  .builder-submit-status{
+    min-height:34px;padding:7px 8px;border:1px solid #a7b2b8;
+    background:#eef2f4;font-size:11px;line-height:1.35;color:#4b5c66;
+  }
+  .builder-submit-status.ok{border-color:#76917a;background:#edf5ee;color:#36543b}
+  .builder-submit-status.warn{border-color:#a78a62;background:#f7f1e8;color:#6f4f28}
   .builder-file-actions{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -995,33 +1212,60 @@
     <header class="builder-bar">
       <div class="builder-title">
         <b>Sestavi svoje telo</b>
-        <small>osnovno 4×4×4 / napredno 10×10×10 · kocka ali omejen rez · nato preveri pravokotno projekcijo</small>
+        <small>4×4×4 / 10×10×10 · 3D in pravokotna projekcija se posodabljata sproti</small>
       </div>
-      <button id="builder3DBtn" class="active">3D sestavljanje</button>
-      <button id="builderProjectionBtn" class="primary">Prikaži projekcije</button>
+      <button id="builderToggle3DBtn" class="active" aria-pressed="true">3D: VKLOP</button>
+      <button id="builderToggleProjectionBtn" class="active" aria-pressed="true">Projekcije: VKLOP</button>
+      <div class="builder-layout-preset" role="group" aria-label="Velikost 3D in pravokotne projekcije">
+        <button id="builderLayoutProjectionBtn" class="active" type="button">Projekcije večje</button>
+        <button id="builderLayoutEqualBtn" type="button">Enako</button>
+        <button id="builderLayout3DBtn" type="button">3D večje</button>
+      </div>
       <button id="builderCloseBtn">Nazaj v učno aplikacijo ✕</button>
     </header>
 
     <main class="builder-main">
-      <section class="builder-stage" id="builderStage">
-        <canvas id="builderCanvas" aria-label="3D prikaz lastnega telesa"></canvas>
-        <canvas id="projectionCanvas" aria-label="Pravokotna projekcija lastnega telesa"></canvas>
+      <section class="builder-stage show-projection show-3d layout-projection" id="builderStage">
+        <div class="builder-projection-pane" id="builderProjectionPane" aria-label="Pravokotna projekcija istega telesa">
+          <canvas id="projectionCanvas" aria-label="Naris, tloris in stranski ris lastnega telesa"></canvas>
+          <div class="builder-pane-chip">Pravokotna projekcija</div>
+        </div>
+
+        <div class="builder-3d-pane" id="builder3DPane" aria-label="3D prikaz istega telesa">
+          <canvas id="builderCanvas" aria-label="3D prikaz lastnega telesa"></canvas>
+          <div class="builder-pane-chip">3D model</div>
+
+          <div class="builder-rotate-pad" id="builderRotatePad" aria-label="Obrni celo telo za 90 stopinj">
+            <div class="rotate-title">Obrni celo telo · 90°</div>
+            <div class="builder-rotate-cross">
+              <span></span>
+              <button id="builderRotateUpBtn" type="button" title="Za 90° navzgor – kot vrtenje, gledano iz narisa" aria-label="Obrni telo za 90 stopinj navzgor">↑</button>
+              <span></span>
+
+              <button id="builderRotateLeftBtn" type="button" title="Za 90° levo – nasprotno smeri urinega kazalca, gledano iz tlorisa" aria-label="Obrni telo za 90 stopinj levo">↶</button>
+              <button id="builderRotationResetBtn" class="rotate-reset" type="button" title="Ponastavi orientacijo telesa" aria-label="Ponastavi orientacijo telesa">0°</button>
+              <button id="builderRotateRightBtn" type="button" title="Za 90° desno – v smeri urinega kazalca, gledano iz tlorisa" aria-label="Obrni telo za 90 stopinj desno">↷</button>
+
+              <span></span>
+              <button id="builderRotateDownBtn" type="button" title="Za 90° navzdol – nasprotno vrtenje, gledano iz narisa" aria-label="Obrni telo za 90 stopinj navzdol">↓</button>
+              <span></span>
+            </div>
+            <div class="rotate-note">↶ / ↷ = pogled iz tlorisa · ↑ / ↓ = pogled iz narisa · po obratu: pripni na mrežo + premakni k 0,0,0</div>
+          </div>
+        </div>
 
         <div class="builder-stage-head">
-          <b id="builderStageTitle">3D model</b>
-          <span id="builderStageHint">Sestavljaj po plasteh. 3D model lahko obračaš z vlečenjem.</span>
+          <b id="builderStageTitle">Skupni pogled</b>
+          <span id="builderStageHint">3D model ter naris, tloris in stranski ris so ves čas sinhronizirani.</span>
         </div>
       </section>
 
       <aside class="builder-side">
         <section class="builder-section">
           <h3>Način sestavljanja</h3>
-          <div class="builder-actions">
-            <button id="builderBasicModeBtn" class="active">Osnovno · 4×4×4 · 10 mm</button>
-            <button id="builderAdvancedModeBtn">Napredno · 10×10×10 · 5 mm</button>
-          </div>
-          <div class="layer-coords" id="builderModeInfo">
-            Osnovni način: največje telo 40 × 40 × 40 mm.
+          <div class="builder-actions builder-mode-actions">
+            <button id="builderBasicModeBtn" class="active">4 × 4 × 4 · 10 mm</button>
+            <button id="builderAdvancedModeBtn">10 × 10 × 10 · 5 mm</button>
           </div>
         </section>
 
@@ -1035,14 +1279,19 @@
         </section>
 
         <section class="builder-section">
-          <h3>2 · Smer reza</h3>
-          <div class="cut-directions">
-            <button class="cut-dir active" data-cut="xp" title="Višje proti +x">X+</button>
-            <button class="cut-dir" data-cut="xn" title="Višje proti -x">X−</button>
-            <button class="cut-dir" data-cut="yp" title="Višje proti +y">Y+</button>
-            <button class="cut-dir" data-cut="yn" title="Višje proti -y">Y−</button>
+          <h3>2 · Rez</h3>
+          <div class="cut-family" role="group" aria-label="Ravnina reza">
+            <button class="cut-family-btn active" data-cut-family="top" title="Poševna ploskev je vidna v narisu ali stranskem risu; odrežemo zgornji klin.">Od zgoraj</button>
+            <button class="cut-family-btn" data-cut-family="bottom" title="Zrcalni rez glede na vodoravno sredino kocke; odrežemo spodnji klin.">Od spodaj</button>
+            <button class="cut-family-btn" data-cut-family="vertical" title="Navpična rezna ravnina; diagonala je vidna v tlorisu.">Navpično</button>
           </div>
-          <div class="layer-coords">Rez ni prost. Izbereš samo eno od štirih dovoljenih smeri poševne ploskve.</div>
+          <div class="cut-directions">
+            <button class="cut-dir active" data-cut="xp" title="Smer X+">X+</button>
+            <button class="cut-dir" data-cut="xn" title="Smer X−">X−</button>
+            <button class="cut-dir" data-cut="yp" title="Smer Y+">Y+</button>
+            <button class="cut-dir" data-cut="yn" title="Smer Y−">Y−</button>
+          </div>
+          <div class="layer-coords">12 dovoljenih rezov: 4 od zgoraj, 4 od spodaj in 4 navpični rezi, ki jih vidiš kot diagonalo v tlorisu.</div>
         </section>
 
         <section class="builder-section">
@@ -1065,8 +1314,11 @@
             <label for="builderModelName">Ime modela</label>
             <input id="builderModelName" type="text" maxlength="80" value="moje_telo" autocomplete="off">
 
-            <label for="builderStudentName">Ime učenca <span style="font-weight:600;text-transform:none;letter-spacing:0">(neobvezno)</span></label>
-            <input id="builderStudentName" type="text" maxlength="80" value="" autocomplete="off" placeholder="npr. Ana">
+            <label for="builderStudentName">Ime učenca <span style="font-weight:600;text-transform:none;letter-spacing:0">(obvezno samo za oddajo)</span></label>
+            <input id="builderStudentName" type="text" maxlength="80" value="" autocomplete="off" placeholder="npr. Ana Novak">
+
+            <label for="builderStudentClass">Razred / oddelek <span style="font-weight:600;text-transform:none;letter-spacing:0">(obvezno samo za oddajo)</span></label>
+            <input id="builderStudentClass" type="text" maxlength="20" value="" autocomplete="off" placeholder="npr. 8. a">
 
             <div id="builderAuthorInfo" style="display:none;padding:7px 8px;border-left:3px solid #55798c;background:#edf2f4;font-size:12px">
               Avtor modela: <b id="builderAuthorName"></b>
@@ -1074,6 +1326,13 @@
             <div class="builder-file-actions">
               <button id="builderSaveBtn" class="primary">Shrani .tehnikamodel</button>
               <button id="builderLoadBtn">Naloži .tehnikamodel</button>
+
+              <div class="builder-submit-box" style="grid-column:1/-1">
+                <button id="builderSendTeacherBtn" class="builder-submit-btn" type="button">Pošlji učitelju</button>
+                <div id="builderSendTeacherStatus" class="builder-submit-status" aria-live="polite">
+                  Oddaja je dovoljena največ enkrat na 60 sekund na posamezen brskalnik.
+                </div>
+              </div>
               <button id="builderPrintSafeStlBtn" class="primary" style="grid-column:1/-1">Izvozi PRINT-SAFE STL · priporočeno</button>
               <button id="builderStlBtn" style="grid-column:1/-1">Izvozi originalni STL · brez prilagoditev</button>
               <div id="builderPrintSafeInfo" style="grid-column:1/-1;padding:8px;border:1px solid #9aa8b0;background:#eef2f4;font-size:11px;line-height:1.4">
@@ -1092,7 +1351,7 @@
             <button id="builderClearBtn">Počisti</button>
             <button id="builderExampleBtn">Naloži primer</button>
             <button id="builderResetViewBtn">Ponastavi pogled</button>
-            <button id="builderShowProjectionBtn" class="primary wide">Prikaži pravokotno projekcijo</button>
+            <button id="builderShowProjectionBtn" class="primary wide">Poudari pravokotno projekcijo</button>
           </div>
         </section>
 
@@ -1190,20 +1449,29 @@
   const builderOverlay = document.getElementById("builderOverlay");
   const builderCloseBtn = document.getElementById("builderCloseBtn");
   const builderStage = document.getElementById("builderStage");
+  const builder3DPane = document.getElementById("builder3DPane");
+  const builderProjectionPane = document.getElementById("builderProjectionPane");
   const builderCanvas = document.getElementById("builderCanvas");
   const bctx = builderCanvas.getContext("2d");
   const projectionCanvas = document.getElementById("projectionCanvas");
   const pctx = projectionCanvas.getContext("2d");
-  const builder3DBtn = document.getElementById("builder3DBtn");
-  const builderProjectionBtn = document.getElementById("builderProjectionBtn");
+  const builderToggle3DBtn = document.getElementById("builderToggle3DBtn");
+  const builderToggleProjectionBtn = document.getElementById("builderToggleProjectionBtn");
+  const builderLayoutProjectionBtn = document.getElementById("builderLayoutProjectionBtn");
+  const builderLayoutEqualBtn = document.getElementById("builderLayoutEqualBtn");
+  const builderLayout3DBtn = document.getElementById("builderLayout3DBtn");
   const builderShowProjectionBtn = document.getElementById("builderShowProjectionBtn");
   const builderStageTitle = document.getElementById("builderStageTitle");
   const builderStageHint = document.getElementById("builderStageHint");
+  const builderRotateLeftBtn = document.getElementById("builderRotateLeftBtn");
+  const builderRotateRightBtn = document.getElementById("builderRotateRightBtn");
+  const builderRotateUpBtn = document.getElementById("builderRotateUpBtn");
+  const builderRotateDownBtn = document.getElementById("builderRotateDownBtn");
+  const builderRotationResetBtn = document.getElementById("builderRotationResetBtn");
   const layerGrid = document.getElementById("layerGrid");
   const builderLayerButtons = document.getElementById("builderLayerButtons");
   const builderBasicModeBtn = document.getElementById("builderBasicModeBtn");
   const builderAdvancedModeBtn = document.getElementById("builderAdvancedModeBtn");
-  const builderModeInfo = document.getElementById("builderModeInfo");
   const builderStatus = document.getElementById("builderStatus");
   const builderUndoBtn = document.getElementById("builderUndoBtn");
   const builderClearBtn = document.getElementById("builderClearBtn");
@@ -1211,6 +1479,9 @@
   const builderResetViewBtn = document.getElementById("builderResetViewBtn");
   const builderModelName = document.getElementById("builderModelName");
   const builderStudentName = document.getElementById("builderStudentName");
+  const builderStudentClass = document.getElementById("builderStudentClass");
+  const builderSendTeacherBtn = document.getElementById("builderSendTeacherBtn");
+  const builderSendTeacherStatus = document.getElementById("builderSendTeacherStatus");
   const builderAuthorInfo = document.getElementById("builderAuthorInfo");
   const builderAuthorName = document.getElementById("builderAuthorName");
   const builderSaveBtn = document.getElementById("builderSaveBtn");
@@ -1219,6 +1490,7 @@
   const builderStlBtn = document.getElementById("builderStlBtn");
   const builderPrintSafeStlBtn = document.getElementById("builderPrintSafeStlBtn");
   const builderToolButtons = [...document.querySelectorAll(".builder-tool")];
+  const cutFamilyButtons = [...document.querySelectorAll(".cut-family-btn")];
   const cutDirButtons = [...document.querySelectorAll(".cut-dir")];
   let layerButtons = [];
 
@@ -1701,26 +1973,37 @@
     return out;
   }
 
-  function voxelProjectionDepthProfile(cubes,view){
+  function voxelProjectionDepthProfile(cubes,view,fromPositiveAxis=false){
     const profile=new Map();
 
     cubes.forEach(([x,y,z])=>{
       let a,b,depth;
+
       if(view==="top"){
-        a=x;b=y;depth=z+1; // od zgoraj je bližje večji z
+        a=x;b=y;depth=z+1; // vedno iz +Z proti -Z
       }else if(view==="front"){
-        a=x;b=z;depth=y;   // od spredaj je bližje manjši y
+        a=x;b=z;
+        // Builder: iz +Y proti -Y. Stari učni del obdržimo nespremenjen.
+        depth=fromPositiveAxis ? y+1 : y;
       }else{
-        a=y;b=z;depth=x;   // z leve je bližje manjši x
+        a=y;b=z;
+        // Builder side: z leve = iz +X proti -X.
+        depth=fromPositiveAxis ? x+1 : x;
       }
 
       const k=`${a},${b}`;
+
       if(!profile.has(k)){
         profile.set(k,depth);
-      }else if(view==="top"){
-        if(depth>profile.get(k))profile.set(k,depth);
-      }else if(depth<profile.get(k)){
-        profile.set(k,depth);
+      }else{
+        const current=profile.get(k);
+
+        // Top vedno gleda iz pozitivne osi. Builder front/side tudi.
+        if(view==="top" || fromPositiveAxis){
+          if(depth>current)profile.set(k,depth);
+        }else{
+          if(depth<current)profile.set(k,depth);
+        }
       }
     });
 
@@ -1778,8 +2061,8 @@
     return [...out,...other];
   }
 
-  function voxelHiddenEdgesGrid(cubes,view){
-    const profile=voxelProjectionDepthProfile(cubes,view);
+  function voxelHiddenEdgesGrid(cubes,view,fromPositiveAxis=false){
+    const profile=voxelProjectionDepthProfile(cubes,view,fromPositiveAxis);
     const visibleProjectedKeys=new Set();
     const hiddenCandidates=[];
     const EPS_SAMPLE=0.001;
@@ -1812,7 +2095,9 @@
         if(Math.abs(d-edgeDepth)<EPS_DEPTH){
           visible=true;
         }else{
-          const nearer=view==="top" ? d>edgeDepth+EPS_DEPTH : d<edgeDepth-EPS_DEPTH;
+          const nearer=(view==="top" || fromPositiveAxis)
+            ? d>edgeDepth+EPS_DEPTH
+            : d<edgeDepth-EPS_DEPTH;
           if(nearer)occluded=true;
         }
       }
@@ -3101,8 +3386,8 @@
     To je tudi bolj fina fizična resolucija za STL in bolj fine modele.
   */
   const BUILDER_MODES = {
-    basic:{id:"basic", n:4, cellMm:10, label:"Osnovno"},
-    advanced:{id:"advanced", n:10, cellMm:5, label:"Napredno"}
+    basic:{id:"basic", n:4, cellMm:10, label:"4 × 4 × 4 · 10 mm"},
+    advanced:{id:"advanced", n:10, cellMm:5, label:"10 × 10 × 10 · 5 mm"}
   };
 
   let builderMode = BUILDER_MODES.basic;
@@ -3117,17 +3402,34 @@
     cells:new Map(),
     history:[],
     tool:"add",
+    cutFamily:"top",
     cutDir:"xp",
     layer:0,
-    yaw:-0.70,
+    yaw:2.35619449,
     pitch:0.52,
-    targetYaw:-0.70,
+    targetYaw:2.35619449,
     targetPitch:0.52,
     zoom:1,
     dragging:false,
     lastX:0,
     lastY:0,
-    view:"3d",
+    // Oba pogleda sta privzeto vključena. "layout" določa samo razpored.
+    show3D:true,
+    showProjection:true,
+    layout:"projection",
+
+    // Rigid 90° orientation of the ENTIRE built body relative to the fixed
+    // projection planes. Matrix maps local builder coordinates -> world axes.
+    objectRotation:[
+      [1,0,0],
+      [0,1,0],
+      [0,0,1]
+    ],
+
+    // Uniform translation of the already rotated body in world/grid space.
+    // After every 90° turn it is chosen so the occupied bounding box starts
+    // exactly at x=0, y=0, z=0. This keeps every cube on the voxel grid.
+    objectTranslation:[0,0,0],
 
     // Projection analysis je precej pametnejši kot prej, zato ga ne računamo
     // znova 60x na sekundo, če se model ni spremenil.
@@ -3140,6 +3442,689 @@
   function markBuilderGeometryChanged(){
     builderState.projectionRevision++;
     builderProjectionCache.clear();
+  }
+
+  /*
+    WHOLE-OBJECT ORIENTATION
+    ------------------------
+    Builder cells stay the source-of-truth in their local coordinate system.
+
+    IMPORTANT:
+    the 90° turn is around the INTERNAL AXIS of the geometry that actually
+    exists, not around the centre of the 4×4×4 / 10×10×10 modelling space.
+
+    We therefore use the centre of the smallest 3D bounding box that contains
+    every occupied builder cell. Disconnected pieces still behave as ONE rigid
+    object, because the same occupied-object pivot is used for all of them.
+
+    Consequence:
+    - one single cube rotates around its own centre and therefore stays exactly
+      in the same place;
+    - a larger / disconnected body rotates in place around its own centre;
+    - the editor grid and the active-layer guide DO NOT rotate with the body.
+  */
+  const BUILDER_ROT_IDENTITY = [
+    [1,0,0],
+    [0,1,0],
+    [0,0,1]
+  ];
+
+  const BUILDER_ROT_Z_CCW = [
+    [0,-1,0],
+    [1, 0,0],
+    [0, 0,1]
+  ];
+  const BUILDER_ROT_Z_CW = [
+    [ 0,1,0],
+    [-1,0,0],
+    [ 0,0,1]
+  ];
+  const BUILDER_ROT_Y_POS = [
+    [0,0, 1],
+    [0,1, 0],
+    [-1,0,0]
+  ];
+  const BUILDER_ROT_Y_NEG = [
+    [0,0,-1],
+    [0,1, 0],
+    [1,0, 0]
+  ];
+
+  function cloneMat3(m){
+    return m.map(row=>row.slice());
+  }
+
+  function mulMat3(A,B){
+    const out=[[0,0,0],[0,0,0],[0,0,0]];
+    for(let r=0;r<3;r++){
+      for(let c=0;c<3;c++){
+        out[r][c]=
+          A[r][0]*B[0][c]+
+          A[r][1]*B[1][c]+
+          A[r][2]*B[2][c];
+      }
+    }
+    return out;
+  }
+
+  function transposeMat3(m){
+    return [
+      [m[0][0],m[1][0],m[2][0]],
+      [m[0][1],m[1][1],m[2][1]],
+      [m[0][2],m[1][2],m[2][2]]
+    ];
+  }
+
+  function mulMat3Vec(m,v){
+    return [
+      m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]*v[2],
+      m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]*v[2],
+      m[2][0]*v[0]+m[2][1]*v[1]+m[2][2]*v[2]
+    ];
+  }
+
+  function normalizedQuarterTurnMatrix(m){
+    return m.map(row=>row.map(v=>{
+      if(Math.abs(v)<1e-9)return 0;
+      if(Math.abs(v-1)<1e-9)return 1;
+      if(Math.abs(v+1)<1e-9)return -1;
+      return v;
+    }));
+  }
+
+  function isValidBuilderRotationMatrix(m){
+    if(!Array.isArray(m) || m.length!==3 || m.some(row=>!Array.isArray(row) || row.length!==3))return false;
+    if(m.flat().some(v=>![-1,0,1].includes(v)))return false;
+
+    const Rt=transposeMat3(m);
+    const P=mulMat3(Rt,m);
+    const I=BUILDER_ROT_IDENTITY;
+    for(let r=0;r<3;r++)for(let c=0;c<3;c++)if(P[r][c]!==I[r][c])return false;
+
+    // Proper rotations only; reflections are not allowed.
+    const det=
+      m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-
+      m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+
+      m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+    return det===1;
+  }
+
+  function builderRotationIsIdentity(){
+    const m=builderState.objectRotation;
+    return m[0][0]===1&&m[0][1]===0&&m[0][2]===0&&
+           m[1][0]===0&&m[1][1]===1&&m[1][2]===0&&
+           m[2][0]===0&&m[2][1]===0&&m[2][2]===1;
+  }
+
+  function isValidBuilderTranslation(v){
+    return Array.isArray(v) &&
+      v.length===3 &&
+      v.every(n=>Number.isFinite(n) && Math.abs(n)<=1000);
+  }
+
+  let builderOccupiedBoundsCache={revision:-1,value:null};
+
+  function builderOccupiedBounds(){
+    // Local/model bounds only. They do NOT include whole-object rotation or
+    // translation. Every allowed primitive lives inside one unit voxel cell.
+    if(
+      builderOccupiedBoundsCache.revision===builderState.projectionRevision &&
+      builderOccupiedBoundsCache.value
+    ){
+      return builderOccupiedBoundsCache.value;
+    }
+
+    let value;
+
+    if(builderState.cells.size===0){
+      value={min:[0,0,0],max:[0,0,0],center:[0,0,0]};
+    }else{
+      const min=[Infinity,Infinity,Infinity];
+      const max=[-Infinity,-Infinity,-Infinity];
+
+      builderState.cells.forEach((cell,key)=>{
+        const [x,y,z]=key.split(",").map(Number);
+        min[0]=Math.min(min[0],x);
+        min[1]=Math.min(min[1],y);
+        min[2]=Math.min(min[2],z);
+        max[0]=Math.max(max[0],x+1);
+        max[1]=Math.max(max[1],y+1);
+        max[2]=Math.max(max[2],z+1);
+      });
+
+      value={
+        min,
+        max,
+        center:[
+          (min[0]+max[0])/2,
+          (min[1]+max[1])/2,
+          (min[2]+max[2])/2
+        ]
+      };
+    }
+
+    builderOccupiedBoundsCache={
+      revision:builderState.projectionRevision,
+      value
+    };
+    return value;
+  }
+
+  function builderBoundsCorners(bounds){
+    const [x0,y0,z0]=bounds.min;
+    const [x1,y1,z1]=bounds.max;
+    return [
+      [x0,y0,z0],[x1,y0,z0],[x0,y1,z0],[x1,y1,z0],
+      [x0,y0,z1],[x1,y0,z1],[x0,y1,z1],[x1,y1,z1]
+    ];
+  }
+
+  function builderTransformedBounds(
+    matrix=builderState.objectRotation,
+    translation=builderState.objectTranslation
+  ){
+    if(builderState.cells.size===0){
+      return {min:[0,0,0],max:[0,0,0],center:[0,0,0]};
+    }
+
+    const min=[Infinity,Infinity,Infinity];
+    const max=[-Infinity,-Infinity,-Infinity];
+
+    builderBoundsCorners(builderOccupiedBounds()).forEach(p=>{
+      const r=mulMat3Vec(matrix,p);
+      const w=[
+        r[0]+translation[0],
+        r[1]+translation[1],
+        r[2]+translation[2]
+      ];
+
+      for(let a=0;a<3;a++){
+        min[a]=Math.min(min[a],w[a]);
+        max[a]=Math.max(max[a],w[a]);
+      }
+    });
+
+    return {
+      min,
+      max,
+      center:[
+        (min[0]+max[0])/2,
+        (min[1]+max[1])/2,
+        (min[2]+max[2])/2
+      ]
+    };
+  }
+
+  function builderPackedTranslationForRotation(matrix){
+    /*
+      ROTATE -> SNAP -> MOVE TO ORIGIN
+      ---------------------------------
+      A quarter-turn matrix contains only -1/0/+1 and every local voxel
+      boundary has integer coordinates. Therefore R*p still lies on integer
+      grid lines. Translating the whole rotated bounding box by -min places
+      its minimum corner exactly at 0,0,0 without changing any relative
+      position between pieces.
+
+      This is equivalent to:
+        1) turn the rigid body around its internal centre,
+        2) snap the WHOLE body (never individual cubes),
+        3) move it as close as possible to 0,0,0.
+
+      The final placement is independent of the temporary rotation pivot,
+      because step 3 removes the uniform translation introduced by that pivot.
+    */
+    if(builderState.cells.size===0)return [0,0,0];
+
+    const raw=builderTransformedBounds(matrix,[0,0,0]);
+
+    // Quarter-turn math is exact, but normalize tiny -0 values just in case.
+    return raw.min.map(v=>{
+      const t=-v;
+      return Math.abs(t-Math.round(t))<1e-9 ? Math.round(t) : t;
+    });
+  }
+
+  function builderWorkspaceTranslationForRotation(matrix){
+    /*
+      GRID-ALIGNED WORKSPACE TRANSFORM
+      --------------------------------
+      Whole-body rotation is stored as a rigid matrix, but the 2D layer editor
+      must still be a true n × n world grid after a turn.
+
+      For every quarter-turn we therefore choose the translation that maps the
+      complete LOCAL modelling cube [0,n]^3 back onto the fixed WORLD cube
+      [0,n]^3. A negative axis needs a +n offset; positive axes need 0.
+    */
+    const n=builderMode.n;
+    const corners=[
+      [0,0,0],[n,0,0],[0,n,0],[n,n,0],
+      [0,0,n],[n,0,n],[0,n,n],[n,n,n]
+    ];
+    const min=[Infinity,Infinity,Infinity];
+
+    corners.forEach(p=>{
+      const r=mulMat3Vec(matrix,p);
+      for(let a=0;a<3;a++)min[a]=Math.min(min[a],r[a]);
+    });
+
+    return min.map(v=>{
+      const t=-v;
+      return Math.abs(t-Math.round(t))<1e-9 ? Math.round(t) : t;
+    });
+  }
+
+  function rebaseBuilderCellsForWorldGrid(matrix,desiredWorldTranslation){
+    /*
+      KEEP THE VISIBLE BODY FIXED, MOVE ONLY THE LOCAL ORIGIN
+      -------------------------------------------------------
+      desiredWorldTranslation is the "packed-to-origin" translation computed
+      from the ACTUAL body. That is pedagogically what we want to see.
+
+      The layer editor, however, needs the complete modelling workspace to map
+      1:1 onto world coordinates 0..n. We can satisfy both requirements without
+      moving the visible body:
+        world = R * p + desiredT
+              = R * (p + shiftLocal) + workspaceT
+
+      shiftLocal = R^T * (desiredT - workspaceT)
+
+      We therefore translate ALL sparse-map cell keys by the SAME INTEGER
+      vector and use workspaceT as the presentation translation. This is only a
+      change of local coordinate origin; relative positions and cut geometry do
+      not change.
+    */
+    const workspaceT=builderWorkspaceTranslationForRotation(matrix);
+    const delta=[
+      desiredWorldTranslation[0]-workspaceT[0],
+      desiredWorldTranslation[1]-workspaceT[1],
+      desiredWorldTranslation[2]-workspaceT[2]
+    ];
+    const rawShift=mulMat3Vec(transposeMat3(matrix),delta);
+    const shift=rawShift.map(v=>Math.round(v));
+
+    if(rawShift.some((v,i)=>Math.abs(v-shift[i])>1e-8)){
+      return {ok:false,translation:desiredWorldTranslation.slice(),shift:[0,0,0]};
+    }
+
+    const next=new Map();
+    let valid=true;
+
+    builderState.cells.forEach((cell,key)=>{
+      const [x,y,z]=key.split(",").map(Number);
+      const q=[x+shift[0],y+shift[1],z+shift[2]];
+
+      if(q.some(v=>!Number.isInteger(v) || v<0 || v>=builderMode.n)){
+        valid=false;
+        return;
+      }
+
+      next.set(builderKey(q[0],q[1],q[2]),{...cell});
+    });
+
+    if(!valid || next.size!==builderState.cells.size){
+      return {ok:false,translation:desiredWorldTranslation.slice(),shift:[0,0,0]};
+    }
+
+    builderState.cells=next;
+    return {ok:true,translation:workspaceT,shift};
+  }
+
+  function builderLocalVoxelForWorldVoxel(wx,wy,wz){
+    /*
+      Map a WORLD editor cell back to the sparse local cell map. After the
+      rebase above this is a bijection for all cells in 0..n-1.
+    */
+    const q=inverseTransformBuilderPoint([wx+0.5,wy+0.5,wz+0.5]);
+    const local=q.map(v=>Math.floor(v+1e-9));
+
+    if(local.some(v=>v<0 || v>=builderMode.n))return null;
+
+    const center=local.map(v=>v+0.5);
+    if(center.some((v,i)=>Math.abs(v-q[i])>1e-7))return null;
+
+    return {x:local[0],y:local[1],z:local[2]};
+  }
+
+  // --------------------------------------------------------------------
+  // 12 REZANIH GRADNIKOV
+  // --------------------------------------------------------------------
+  // Vsak rez je polovica kocke: trikotna prizma. Režemo v eni od treh
+  // koordinatnih ravnin (XZ, YZ, XY), v vsaki pa obstajajo štiri polovice.
+  //
+  // tri A/B/C/D pomeni, kateri trikotnik v enotskem kvadratu ostane:
+  //   A: v <= u        B: v <= 1-u
+  //   C: v >= u        D: v >= 1-u
+  //
+  // Stari xp/xn/yp/yn so natanko:
+  //   xp = XZ/A, xn = XZ/B, yp = YZ/A, yn = YZ/B.
+  // Tako lahko stare .tehnikamodel datoteke brez izgube prevedemo v v2.
+  const CUT_PLANES=["xz","yz","xy"];
+  const CUT_TRIS=["a","b","c","d"];
+
+  function legacyCutDirToSpec(dir){
+    if(dir==="xp")return {plane:"xz",tri:"a"};
+    if(dir==="xn")return {plane:"xz",tri:"b"};
+    if(dir==="yp")return {plane:"yz",tri:"a"};
+    if(dir==="yn")return {plane:"yz",tri:"b"};
+    return null;
+  }
+
+  function normalizedCutSpec(cell){
+    if(!cell || cell.kind!=="cut")return null;
+    if(CUT_PLANES.includes(cell.plane) && CUT_TRIS.includes(cell.tri)){
+      return {plane:cell.plane,tri:cell.tri};
+    }
+    return legacyCutDirToSpec(cell.dir);
+  }
+
+  function uiCutSelectionToWorldSpec(){
+    const d=builderState.cutDir;
+    const f=builderState.cutFamily;
+
+    if(f==="top"){
+      if(d==="xp")return {plane:"xz",tri:"a"};
+      if(d==="xn")return {plane:"xz",tri:"b"};
+      if(d==="yp")return {plane:"yz",tri:"a"};
+      return {plane:"yz",tri:"b"};
+    }
+
+    if(f==="bottom"){
+      if(d==="xp")return {plane:"xz",tri:"c"};
+      if(d==="xn")return {plane:"xz",tri:"d"};
+      if(d==="yp")return {plane:"yz",tri:"c"};
+      return {plane:"yz",tri:"d"};
+    }
+
+    // Navpični rez: diagonala je vidna v tlorisu.
+    // Štirje gumbi pomenijo štiri možne ohranjene trikotne polovice.
+    if(d==="xp")return {plane:"xy",tri:"a"};
+    if(d==="xn")return {plane:"xy",tri:"c"};
+    if(d==="yp")return {plane:"xy",tri:"d"};
+    return {plane:"xy",tri:"b"};
+  }
+
+  const CUT_TRI_2D={
+    a:[[0,0],[1,0],[1,1]],
+    b:[[0,0],[1,0],[0,1]],
+    c:[[0,0],[0,1],[1,1]],
+    d:[[1,0],[0,1],[1,1]]
+  };
+
+  function cutPlaneAxes(plane){
+    if(plane==="xz")return {u:0,v:2,w:1};
+    if(plane==="yz")return {u:1,v:2,w:0};
+    return {u:0,v:1,w:2}; // xy
+  }
+
+  function cutSpecUnitVertices(spec){
+    if(!spec || !CUT_PLANES.includes(spec.plane) || !CUT_TRIS.includes(spec.tri))return [];
+    const ax=cutPlaneAxes(spec.plane);
+    const tri=CUT_TRI_2D[spec.tri];
+    const out=[];
+
+    for(const w of [0,1]){
+      tri.forEach(([u,v])=>{
+        const p=[0,0,0];
+        p[ax.u]=u;p[ax.v]=v;p[ax.w]=w;
+        out.push(p);
+      });
+    }
+    return out;
+  }
+
+  function cutSpecUnitFaces(spec){
+    const verts=cutSpecUnitVertices(spec);
+    if(verts.length!==6)return [];
+
+    // Prva tri oglišča so na w=0, druga tri na w=1.
+    // orientFaceOutward() kasneje poskrbi za pravilno orientacijo normal.
+    return [
+      [verts[0],verts[1],verts[2]],
+      [verts[3],verts[5],verts[4]],
+      [verts[0],verts[3],verts[4],verts[1]],
+      [verts[1],verts[4],verts[5],verts[2]],
+      [verts[2],verts[5],verts[3],verts[0]]
+    ];
+  }
+
+  function cutSpecHalfspace(spec){
+    // n · p <= c v lokalni enotski kocki.
+    const ax=cutPlaneAxes(spec.plane);
+    let nu=0,nv=0,c=0;
+    if(spec.tri==="a"){nu=-1;nv= 1;c= 0;} // v<=u
+    if(spec.tri==="b"){nu= 1;nv= 1;c= 1;} // v<=1-u
+    if(spec.tri==="c"){nu= 1;nv=-1;c= 0;} // v>=u
+    if(spec.tri==="d"){nu=-1;nv=-1;c=-1;} // v>=1-u
+    const n=[0,0,0];
+    n[ax.u]=nu;n[ax.v]=nv;
+    return {n,c};
+  }
+
+  function pointInsideCutSpec(spec,p,eps=1e-9){
+    const h=cutSpecHalfspace(spec);
+    return dot(h.n,p)<=h.c+eps;
+  }
+
+  function cutSpecVertexKey(vertices){
+    return vertices
+      .map(p=>p.map(v=>Math.round(v)).join(","))
+      .sort()
+      .join("|");
+  }
+
+  const CUT_SPEC_BY_VERTEX_KEY=(()=>{
+    const m=new Map();
+    CUT_PLANES.forEach(plane=>CUT_TRIS.forEach(tri=>{
+      const spec={plane,tri};
+      m.set(cutSpecVertexKey(cutSpecUnitVertices(spec)),spec);
+    }));
+    return m;
+  })();
+
+  function matchCutSpecFromUnitVertices(vertices){
+    const normalized=vertices.map(p=>p.map(v=>{
+      const r=Math.round(v);
+      return Math.abs(v-r)<1e-7?r:v;
+    }));
+    return CUT_SPEC_BY_VERTEX_KEY.get(cutSpecVertexKey(normalized)) || null;
+  }
+
+  function cutSpecForWorldCell(cell,lx,ly,lz){
+    const spec=normalizedCutSpec(cell);
+    if(!spec)return null;
+
+    const verts=cutSpecUnitVertices(spec).map(p=>
+      transformBuilderPoint([lx+p[0],ly+p[1],lz+p[2]])
+    );
+
+    // Rotacija 90° preslika lokalno celico v točno eno world celico.
+    const mins=[0,1,2].map(axis=>Math.min(...verts.map(p=>p[axis])));
+    const unit=verts.map(p=>[
+      p[0]-mins[0],p[1]-mins[1],p[2]-mins[2]
+    ]);
+    return matchCutSpecFromUnitVertices(unit);
+  }
+
+  function worldCutSpecToLocalSpec(wx,wy,wz,local,worldSpec){
+    const worldVerts=cutSpecUnitVertices(worldSpec).map(p=>[
+      wx+p[0],wy+p[1],wz+p[2]
+    ]);
+
+    const localVerts=worldVerts.map(p=>{
+      const q=inverseTransformBuilderPoint(p);
+      return [q[0]-local.x,q[1]-local.y,q[2]-local.z];
+    });
+
+    return matchCutSpecFromUnitVertices(localVerts);
+  }
+
+  function cutSpecSymbol(spec){
+    if(!spec)return "／";
+
+    // V aktivnem tlorisu navpični XY rezi pokažejo dejansko polovico kvadrata.
+    // Pri XZ/YZ rezih je tlorisni odtis poln, zato simbol pove os, smer in
+    // ali gre za zgornjo (↑) ali spodnjo (↓) polovico reza.
+    if(spec.plane==="xy"){
+      if(spec.tri==="a")return "◤";
+      if(spec.tri==="b")return "◥";
+      if(spec.tri==="c")return "◢";
+      return "◣";
+    }
+
+    if(spec.plane==="xz"){
+      if(spec.tri==="a")return "↑X+";
+      if(spec.tri==="b")return "↑X−";
+      if(spec.tri==="c")return "↓X+";
+      return "↓X−";
+    }
+
+    if(spec.tri==="a")return "↑Y+";
+    if(spec.tri==="b")return "↑Y−";
+    if(spec.tri==="c")return "↓Y+";
+    return "↓Y−";
+  }
+
+  function builderWorldCutLabel(cell,lx=null,ly=null,lz=null){
+    if(!cell)return "";
+    if(cell.kind==="full")return "■";
+
+    if(Number.isInteger(lx) && Number.isInteger(ly) && Number.isInteger(lz)){
+      const worldSpec=cutSpecForWorldCell(cell,lx,ly,lz);
+      return cutSpecSymbol(worldSpec);
+    }
+
+    const spec=normalizedCutSpec(cell);
+    return cutSpecSymbol(spec);
+  }
+
+  function syncBuilderLayerToWorldBody(){
+    /*
+      Layer numbers are WORLD z-layers. If a turn makes the body shorter and
+      the previously selected layer lies above it, move the selection to the
+      highest occupied layer instead of showing a mysteriously empty editor.
+    */
+    if(builderState.cells.size===0){
+      builderState.layer=0;
+    }else{
+      const b=builderTransformedBounds();
+      const highest=Math.max(0,Math.min(
+        builderMode.n-1,
+        Math.ceil(b.max[2]-1e-9)-1
+      ));
+      builderState.layer=Math.min(builderState.layer,highest);
+    }
+
+    layerButtons.forEach(b=>
+      b.classList.toggle("active",Number(b.dataset.layer)===builderState.layer)
+    );
+  }
+
+  function builderObjectPivot(){
+    // Current internal centre in WORLD coordinates. Useful as a semantic
+    // reference even though the packed final transform can be written simply
+    // as R*p + translation.
+    return builderTransformedBounds().center;
+  }
+
+  function transformBuilderPoint(p){
+    const r=mulMat3Vec(builderState.objectRotation,p);
+    const t=builderState.objectTranslation;
+    return [r[0]+t[0],r[1]+t[1],r[2]+t[2]];
+  }
+
+  function inverseTransformBuilderPoint(p){
+    const t=builderState.objectTranslation;
+    const q=[p[0]-t[0],p[1]-t[1],p[2]-t[2]];
+    return mulMat3Vec(transposeMat3(builderState.objectRotation),q);
+  }
+
+  function setBuilderObjectTransform(matrix,translation,{message=""}={}){
+    builderState.objectRotation=normalizedQuarterTurnMatrix(matrix);
+    builderState.objectTranslation=isValidBuilderTranslation(translation)
+      ? translation.slice()
+      : [0,0,0];
+
+    markBuilderGeometryChanged();
+
+    // Aktivna plast je vedno WORLD z-plast trenutne orientacije telesa.
+    // Po obratu mora zato tudi 2D editor takoj slediti novi orientaciji.
+    syncBuilderLayerToWorldBody();
+    renderLayerGrid();
+
+    // 90° obrat spremeni samo telo. Nobenega prikaza ne preklapljamo.
+    // Oba vključena pogleda se osvežita iz istega builderState.
+    if(builderState.showProjection)renderBuilderProjection();
+    if(builderState.show3D)renderBuilder3D();
+
+    if(message)updateBuilderStatus(message);
+  }
+
+  function rotateBuilderObject(turn){
+    if(builderState.cells.size===0){
+      updateBuilderStatus("Najprej sestavi telo, nato ga lahko obrneš za 90°.");
+      return;
+    }
+
+    let Q=BUILDER_ROT_IDENTITY;
+    let directionText="";
+
+    if(turn==="left"){
+      Q=BUILDER_ROT_Z_CCW;
+      directionText="levo (gledano iz tlorisa)";
+    }else if(turn==="right"){
+      Q=BUILDER_ROT_Z_CW;
+      directionText="desno (gledano iz tlorisa)";
+    }else if(turn==="up"){
+      // Viewed from +Y (naris), this tips the body upward in the x-z plane.
+      Q=BUILDER_ROT_Y_NEG;
+      directionText="navzgor (gledano iz narisa)";
+    }else if(turn==="down"){
+      Q=BUILDER_ROT_Y_POS;
+      directionText="navzdol (gledano iz narisa)";
+    }else{
+      return;
+    }
+
+    const nextRotation=normalizedQuarterTurnMatrix(
+      mulMat3(Q,builderState.objectRotation)
+    );
+
+    // Core rule:
+    //   1) rotate the complete rigid body,
+    //   2) pack its occupied bounds to world 0,0,0,
+    //   3) rebase LOCAL cell keys so the fixed n×n×n editor still maps 1:1
+    //      to the CURRENT world grid.
+    // Step 3 does not move the visible body; it only changes the local origin.
+    const packedTranslation=builderPackedTranslationForRotation(nextRotation);
+    const rebased=rebaseBuilderCellsForWorldGrid(nextRotation,packedTranslation);
+    const nextTranslation=rebased.translation;
+
+    setBuilderObjectTransform(
+      nextRotation,
+      nextTranslation,
+      {
+        message:
+          `Celo telo je obrnjeno za 90° ${directionText}. `+
+          `Pripeto je na mrežo in prestavljeno k 0,0,0. Trenutni pogled ostane nespremenjen.`
+      }
+    );
+  }
+
+  function resetBuilderObjectRotation(){
+    const nextRotation=cloneMat3(BUILDER_ROT_IDENTITY);
+    const packedTranslation=builderPackedTranslationForRotation(nextRotation);
+    const rebased=rebaseBuilderCellsForWorldGrid(nextRotation,packedTranslation);
+    const nextTranslation=rebased.translation;
+
+    setBuilderObjectTransform(
+      nextRotation,
+      nextTranslation,
+      {
+        message:
+          "Orientacija telesa je ponastavljena na 0°. "+
+          "Telo je pripeto na mrežo in prestavljeno k 0,0,0. Trenutni pogled ostane nespremenjen."
+      }
+    );
   }
 
 
@@ -3166,20 +4151,17 @@
   }
 
   function syncBuilderModeUI(){
-    document.documentElement.style.setProperty("--builder-grid-n",String(builderMode.n));
+    // Editor pokaže še 1 referenčni pas: zgornja vrstica + desni stolpec.
+    // Aktivna geometrija pa ostane n × n.
+    document.documentElement.style.setProperty("--builder-grid-n",String(builderMode.n+1));
 
     builderBasicModeBtn.classList.toggle("active",builderMode.id==="basic");
     builderAdvancedModeBtn.classList.toggle("active",builderMode.id==="advanced");
 
     STL_CELL_MM=builderMode.cellMm;
 
-    builderModeInfo.textContent=
-      `${builderMode.label} način: mreža ${builderMode.n} × ${builderMode.n} × ${builderMode.n}, `+
-      `ena mini kocka = ${builderMode.cellMm} mm, največje telo = `+
-      `${builderMode.n*builderMode.cellMm} × ${builderMode.n*builderMode.cellMm} × ${builderMode.n*builderMode.cellMm} mm.`;
-
     builderStageHint.textContent=
-      `Sestavljaj po plasteh. Ena mini kocka = ${builderMode.cellMm} mm. 3D model lahko obračaš z vlečenjem.`;
+      `Sestavljaj po plasteh. Ena mini kocka = ${builderMode.cellMm} mm. Vlečenje obrača kamero; 90° obrat telo pripne na mrežo in prestavi k 0,0,0.`;
 
     rebuildLayerButtons();
     renderLayerGrid();
@@ -3201,6 +4183,8 @@
     builderMode=next;
     builderState.cells.clear();
     builderState.history=[];
+    builderState.objectRotation=cloneMat3(BUILDER_ROT_IDENTITY);
+    builderState.objectTranslation=[0,0,0];
     markBuilderGeometryChanged();
     builderState.layer=0;
     builderStudentName.value="";
@@ -3242,6 +4226,14 @@
     cutDirButtons.forEach(b=>b.classList.toggle("active",b.dataset.cut===dir));
   }
 
+  function setBuilderCutFamily(family){
+    if(!["top","bottom","vertical"].includes(family))return;
+    builderState.cutFamily=family;
+    cutFamilyButtons.forEach(b=>
+      b.classList.toggle("active",b.dataset.cutFamily===family)
+    );
+  }
+
   function setBuilderLayer(layer){
     builderState.layer=clamp(Number(layer),0,builderMode.n-1);
     layerButtons.forEach(b=>b.classList.toggle("active",Number(b.dataset.layer)===builderState.layer));
@@ -3258,28 +4250,77 @@
   /*
     2D LAYER EDITOR RENDER
     ----------------------
-    User ureja aktivno z-plast iz tlorisa.
+    User ureja aktivno WORLD z-plast iz tlorisa.
+    Po 90° obratu mreža sledi trenutni orientaciji telesa; lokalni sparse
+    koordinatni sistem ostane implementacijska podrobnost.
     To je natančen edit surface; 3D je bolj za mental model.
   */
   function renderLayerGrid(){
     layerGrid.innerHTML="";
 
-    // Grid is shown as "front at bottom". To je bolj naravno za sestavljanje:
-    // zgornja vrstica je y=3, spodnja y=0.
-    for(let y=builderMode.n-1;y>=0;y--){
-      for(let x=0;x<builderMode.n;x++){
-        const k=builderKey(x,y,builderState.layer);
-        const cell=builderState.cells.get(k);
+    /*
+      DISPLAY GRID = (n+1) × (n+1)
+      --------------------------------
+      Zgornja vrstica in desni stolpec sta samo referenčni pas ob oseh.
+      Nista del modela, zato ju NE shranjujemo in nimata "x=-1 / y=-1".
+
+      Aktivni del ostane n × n:
+        - (x=0, y=0) je eno polje LEVO in eno polje DOL od zgornjega desnega vogala,
+        - +x gre proti LEVI,
+        - +y gre NAVZDOL.
+
+      Tako stare .tehnikamodel datoteke z x/y = 0..n-1 ostanejo 100 % združljive.
+    */
+    const displayN=builderMode.n+1;
+
+    for(let row=0;row<displayN;row++){
+      for(let col=0;col<displayN;col++){
+
+        // Zgornja vrstica + desni stolpec = vizualni referenčni pas.
+        const isReference=(row===0 || col===displayN-1);
 
         const btn=document.createElement("button");
         btn.type="button";
-        btn.className="layer-cell"+(cell ? (cell.kind==="cut"?" cut":" full") : "");
-        btn.textContent=builderCellLabel(cell);
-        btn.title=`x=${x+1}, y=${y+1}, z=${builderState.layer+1}`;
 
-        btn.addEventListener("click",()=>{
-          editBuilderCell(x,y,builderState.layer);
-        });
+        if(isReference){
+          btn.className="layer-cell reference";
+          btn.disabled=true;
+          btn.setAttribute("aria-hidden","true");
+          btn.title="Referenčni pas ob osi";
+          layerGrid.appendChild(btn);
+          continue;
+        }
+
+        // Zaslonska mreža je vedno CURRENT WORLD tloris:
+        // col n-1 (desna aktivna celica) -> world x=0
+        // row 1  (prva aktivna vrstica)  -> world y=0
+        // builderState.layer             -> world z
+        const wx=(builderMode.n-1)-col;
+        const wy=row-1;
+        const wz=builderState.layer;
+
+        const local=builderLocalVoxelForWorldVoxel(wx,wy,wz);
+        const k=local ? builderKey(local.x,local.y,local.z) : null;
+        const cell=k ? builderState.cells.get(k) : null;
+
+        btn.className="layer-cell"+(cell ? (cell.kind==="cut"?" cut":" full") : "");
+        btn.textContent=cell && local ? builderWorldCutLabel(cell,local.x,local.y,local.z) : "";
+
+        // Koordinate v namigu so koordinate, ki jih učenec trenutno vidi na
+        // fiksni mreži, ne skrite lokalne koordinate sparse modela.
+        btn.title=`x=${wx+1}, y=${wy+1}, z=${wz+1}`;
+
+        if(!local){
+          // To se pri novih modelih po workspace-rebase ne bi smelo zgoditi.
+          // Stare eksperimentalne datoteke z netipičnim transformom pa raje
+          // prikažemo varno kot ne-urejevalno polje.
+          btn.disabled=true;
+          btn.classList.add("unavailable");
+        }else{
+          btn.addEventListener("click",()=>{
+            editBuilderWorldCell(wx,wy,wz);
+          });
+        }
 
         layerGrid.appendChild(btn);
       }
@@ -3296,7 +4337,35 @@
     Rez na prazni celici intentionally ni dovoljen:
     najprej imaš material, potem ga odrežeš. Pedagogically cleaner.
   */
-  function editBuilderCell(x,y,z){
+  function editBuilderWorldCell(wx,wy,wz){
+    const local=builderLocalVoxelForWorldVoxel(wx,wy,wz);
+
+    if(!local){
+      updateBuilderStatus("To polje po trenutnem obratu ni dosegljivo v urejevalni mreži.");
+      return;
+    }
+
+    if(builderState.tool!=="cut"){
+      editBuilderCell(local.x,local.y,local.z);
+      return;
+    }
+
+    // Rez je izbran v TRENUTNI WORLD orientaciji, ker učenec dela s tem,
+    // kar trenutno vidi. Nato vseh 6 oglišč trikotne prizme preslikamo nazaj
+    // v lokalno celico. S tem vseh 12 rezov ostane pravilnih po kateremkoli
+    // zaporedju 90° obratov.
+    const worldSpec=uiCutSelectionToWorldSpec();
+    const localSpec=worldCutSpecToLocalSpec(wx,wy,wz,local,worldSpec);
+
+    if(!localSpec){
+      updateBuilderStatus("Izbranega reza v trenutni orientaciji ni mogoče pravilno preslikati na mrežo.");
+      return;
+    }
+
+    editBuilderCell(local.x,local.y,local.z,localSpec);
+  }
+
+  function editBuilderCell(x,y,z,explicitCutSpec=null){
     const k=builderKey(x,y,z);
     const old=builderState.cells.get(k);
 
@@ -3305,14 +4374,21 @@
     if(builderState.tool==="add"){
       builderState.cells.set(k,{kind:"full"});
     }else if(builderState.tool==="cut"){
-      // "Rez" ne ustvarja kosa iz prazne celice. Učenec mora najprej imeti kocko.
-      // To keeps the mental model simple: najprej kocka, potem jo prerežemo.
+      // "Rez" ne ustvarja kosa iz prazne celice. Najprej kocka, nato rez.
       if(!old){
         builderState.history.pop();
         updateBuilderStatus("Najprej dodaj kocko, nato uporabi orodje Rez.");
         return;
       }
-      builderState.cells.set(k,{kind:"cut",dir:builderState.cutDir});
+
+      const spec=explicitCutSpec || uiCutSelectionToWorldSpec();
+      if(!spec || !CUT_PLANES.includes(spec.plane) || !CUT_TRIS.includes(spec.tri)){
+        builderState.history.pop();
+        updateBuilderStatus("Izbrani rez ni veljaven.");
+        return;
+      }
+
+      builderState.cells.set(k,{kind:"cut",plane:spec.plane,tri:spec.tri});
     }else if(builderState.tool==="remove"){
       if(!old){
         builderState.history.pop();
@@ -3400,6 +4476,8 @@
     if(hadGeometry)pushBuilderHistory();
 
     builderState.cells.clear();
+    builderState.objectRotation=cloneMat3(BUILDER_ROT_IDENTITY);
+    builderState.objectTranslation=[0,0,0];
     markBuilderGeometryChanged();
 
     // Ime velja samo za konkretni .tehnikamodel.
@@ -3414,6 +4492,8 @@
   function loadBuilderExample(){
     pushBuilderHistory();
     builderState.cells.clear();
+    builderState.objectRotation=cloneMat3(BUILDER_ROT_IDENTITY);
+    builderState.objectTranslation=[0,0,0];
 
     // Small bridge / opening sample. Namen je pokazati, da lahko učenec
     // začne iz primera, ga spremeni in nato preveri projekcije.
@@ -3437,14 +4517,55 @@
     }
 
     // Two limited cuts on top.
-    add(0,1,2,{kind:"cut",dir:"xp"});
-    add(3,1,2,{kind:"cut",dir:"xn"});
+    add(0,1,2,{kind:"cut",plane:"xz",tri:"a"});
+    add(3,1,2,{kind:"cut",plane:"xz",tri:"b"});
 
     markBuilderGeometryChanged();
     renderLayerGrid();
     updateBuilderStatus("Naložen je primer z odprtino in dvema rezoma.");
   }
 
+
+  function builderWorldCellsSnapshot(){
+    /*
+      Trenutno vidna geometrija -> kanonične WORLD celice.
+      To uporabljamo za shranjevanje v2 in oba STL izvoza. Tako orientacija,
+      ki jo učenec trenutno vidi, postane dejanska geometrija datoteke.
+      objectRotation/objectTranslation zato nista potrebna za nove v2 datoteke.
+    */
+    const out=new Map();
+    const EPS=1e-7;
+
+    builderState.cells.forEach((cell,key)=>{
+      const [lx,ly,lz]=key.split(",").map(Number);
+      const center=transformBuilderPoint([lx+.5,ly+.5,lz+.5]);
+      const wx=Math.floor(center[0]+EPS);
+      const wy=Math.floor(center[1]+EPS);
+      const wz=Math.floor(center[2]+EPS);
+
+      const expected=[wx+.5,wy+.5,wz+.5];
+      if(
+        wx<0 || wy<0 || wz<0 ||
+        wx>=builderMode.n || wy>=builderMode.n || wz>=builderMode.n ||
+        expected.some((v,i)=>Math.abs(v-center[i])>1e-6)
+      ){
+        throw new Error("Trenutne orientacije telesa ni mogoče varno pripeti na mrežo za shranjevanje.");
+      }
+
+      let worldCell={kind:"full"};
+      if(cell.kind==="cut"){
+        const spec=cutSpecForWorldCell(cell,lx,ly,lz);
+        if(!spec)throw new Error("Orientacije rezanega gradnika ni mogoče zapisati.");
+        worldCell={kind:"cut",plane:spec.plane,tri:spec.tri};
+      }
+
+      const wk=builderKey(wx,wy,wz);
+      if(out.has(wk))throw new Error("Po preslikavi sta dva gradnika pristala v isti celici.");
+      out.set(wk,worldCell);
+    });
+
+    return out;
+  }
 
   // ----------------------------------------------------------------------
   // .tehnikamodel FILE FORMAT
@@ -3467,8 +4588,11 @@
     No binary black box.
   */
   const TEHNIKA_MODEL_FORMAT = "tehnikamodel";
-  const TEHNIKA_MODEL_VERSION = 1;
+  const TEHNIKA_MODEL_VERSION = 2;
+  const LEGACY_TEHNIKA_MODEL_VERSION = 1;
   const VALID_CUT_DIRS = new Set(["xp","xn","yp","yn"]);
+  const VALID_CUT_PLANES = new Set(CUT_PLANES);
+  const VALID_CUT_TRIS = new Set(CUT_TRIS);
 
   function safeModelFileName(raw){
     // Keep slovene letters if browser/file system allows them, but remove
@@ -3485,59 +4609,55 @@
 
   function builderModelToPortableObject(){
     const cells=[];
+    const worldCells=builderWorldCellsSnapshot();
 
-    builderState.cells.forEach((cell,key)=>{
+    worldCells.forEach((cell,key)=>{
       const [x,y,z]=key.split(",").map(Number);
 
       if(cell.kind==="cut"){
         cells.push({
           x,y,z,
           type:"cut",
-          cutDir:cell.dir
+          cutPlane:cell.plane,
+          cutTri:cell.tri
         });
       }else{
-        cells.push({
-          x,y,z,
-          type:"full"
-        });
+        cells.push({x,y,z,type:"full"});
       }
     });
 
-    // Stable sort = cleaner diffs if teacher ever opens two files side by side.
-    cells.sort((a,b)=>
-      a.z-b.z ||
-      a.y-b.y ||
-      a.x-b.x
-    );
+    cells.sort((a,b)=>a.z-b.z || a.y-b.y || a.x-b.x);
 
     return {
       format:TEHNIKA_MODEL_FORMAT,
       version:TEHNIKA_MODEL_VERSION,
-
-      // Human-readable metadata. Ja, malo urbano slovensko-angleško nalašč :)
       madeIn:"Tehnika 8 · Pravokotna projekcija · Sestavi svoje telo",
-      humanNote:"Hej :) to je .tehnikamodel. Lahko ga bereš, ampak ne editaj random stvari, če ne veš kaj delaš.",
-
+      humanNote:"Različica 2 podpira 12 diagonalnih rezov. Stare datoteke v1 se še vedno odprejo.",
       modelName:(builderModelName.value || "moje_telo").trim() || "moje_telo",
-
-      // Optional metadata from the student. Če je prazno, je pač prazno.
-      // STL export tega podatka ne potrebuje; pripada .tehnikamodel datoteki.
       studentName:(builderStudentName.value || "").trim(),
-
-      // Physical meaning of one mini-cell. This is critical for STL export
-      // and for opening advanced 5 mm models on another computer.
       mode:builderMode.id,
       cellSizeMm:builderMode.cellMm,
       gridSize:[builderMode.n,builderMode.n,builderMode.n],
       savedAt:new Date().toISOString(),
 
-      // Model data. This is the only geometry source-of-truth in the file.
+      // v2 shrani trenutno VIDNO orientacijo neposredno v koordinatah cells.
+      // Identiteta je zapisana eksplicitno zaradi berljivosti in prihodnjih migracij.
+      objectRotation:cloneMat3(BUILDER_ROT_IDENTITY),
+      objectTranslation:[0,0,0],
       cells
     };
   }
 
   function saveTehnikaModel(){
-    const data=builderModelToPortableObject();
+    let data;
+    try{
+      data=builderModelToPortableObject();
+    }catch(err){
+      console.error("Napaka pri pripravi .tehnikamodel:",err);
+      updateBuilderStatus(`Modela ne morem varno shraniti. ${err.message}`);
+      return;
+    }
+
     const json=JSON.stringify(data,null,2);
     const blob=new Blob([json],{type:"application/json;charset=utf-8"});
     const url=URL.createObjectURL(blob);
@@ -3545,17 +4665,174 @@
     const a=document.createElement("a");
     a.href=url;
     a.download=`${safeModelFileName(data.modelName)}.tehnikamodel`;
-
-    // We keep the anchor invisible; browser still gives the normal Save flow.
     document.body.appendChild(a);
     a.click();
     a.remove();
-
-    // Small timeout: some browsers need the object URL alive until click resolves.
     setTimeout(()=>URL.revokeObjectURL(url),1000);
 
-    updateBuilderStatus(`Model "${data.modelName}" je pripravljen za shranjevanje.`);
+    updateBuilderStatus(
+      `Model "${data.modelName}" je pripravljen za shranjevanje v formatu .tehnikamodel v2.`
+    );
   }
+
+
+  // ----------------------------------------------------------------------
+  // ODDAJA MODELA UČITELJU · prva različica brez CAPTCHA
+  // ----------------------------------------------------------------------
+  const TEACHER_SUBMIT_URL =
+    "https://script.google.com/macros/s/AKfycbw2LcMsS-bnKBi3cfQb-kpeBuCakztXY95ZpnwHT-BjnJriqJvUeNRQ7MrE6419Bi76/exec";
+  const TEACHER_SUBMIT_COOLDOWN_MS = 60 * 1000;
+  const TEACHER_SUBMIT_CLIENT_KEY = "tehnika8_submit_client_id_v1";
+  const TEACHER_SUBMIT_LAST_KEY = "tehnika8_submit_last_v1";
+
+  let builderSubmitBusy=false;
+  let builderSubmitTimer=null;
+  let volatileSubmitClientId="";
+
+  function submitStorageGet(key){
+    try{return localStorage.getItem(key)}catch(err){return null}
+  }
+  function submitStorageSet(key,value){
+    try{localStorage.setItem(key,value);return true}catch(err){return false}
+  }
+  function makeSubmitClientId(){
+    if(window.crypto && typeof window.crypto.randomUUID==="function"){
+      return window.crypto.randomUUID();
+    }
+    const bytes=new Uint8Array(16);
+    if(window.crypto && typeof window.crypto.getRandomValues==="function"){
+      window.crypto.getRandomValues(bytes);
+      return [...bytes].map(v=>v.toString(16).padStart(2,"0")).join("");
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  }
+  function teacherSubmitClientId(){
+    let id=submitStorageGet(TEACHER_SUBMIT_CLIENT_KEY);
+    if(id && id.length>=12)return id;
+    if(!volatileSubmitClientId)volatileSubmitClientId=makeSubmitClientId();
+    id=volatileSubmitClientId;
+    submitStorageSet(TEACHER_SUBMIT_CLIENT_KEY,id);
+    return id;
+  }
+  function lastTeacherSubmitTime(){
+    const raw=Number(submitStorageGet(TEACHER_SUBMIT_LAST_KEY));
+    return Number.isFinite(raw) && raw>0 ? raw : 0;
+  }
+  function teacherSubmitRemainingMs(){
+    return Math.max(0,TEACHER_SUBMIT_COOLDOWN_MS-(Date.now()-lastTeacherSubmitTime()));
+  }
+  function setTeacherSubmitStatus(message,kind=""){
+    builderSendTeacherStatus.textContent=message;
+    builderSendTeacherStatus.classList.remove("ok","warn");
+    if(kind)builderSendTeacherStatus.classList.add(kind);
+  }
+  function updateTeacherSubmitUi(){
+    const remaining=teacherSubmitRemainingMs();
+
+    if(builderSubmitBusy){
+      builderSendTeacherBtn.disabled=true;
+      builderSendTeacherBtn.textContent="Pošiljam …";
+      return;
+    }
+
+    if(remaining>0){
+      const sec=Math.ceil(remaining/1000);
+      builderSendTeacherBtn.disabled=true;
+      builderSendTeacherBtn.textContent=`Ponovna oddaja čez ${sec} s`;
+      setTeacherSubmitStatus(`Model je bil poslan. Novo oddajo lahko pošlješ čez ${sec} s.`,"ok");
+    }else{
+      builderSendTeacherBtn.disabled=false;
+      builderSendTeacherBtn.textContent="Pošlji učitelju";
+      if(builderSendTeacherStatus.classList.contains("ok")){
+        setTeacherSubmitStatus("Pripravljen za novo oddajo. Največ ena oddaja na 60 sekund.");
+      }
+    }
+  }
+  function startTeacherSubmitCountdown(){
+    if(builderSubmitTimer)clearInterval(builderSubmitTimer);
+    updateTeacherSubmitUi();
+    builderSubmitTimer=setInterval(()=>{
+      updateTeacherSubmitUi();
+      if(!builderSubmitBusy && teacherSubmitRemainingMs()<=0){
+        clearInterval(builderSubmitTimer);
+        builderSubmitTimer=null;
+      }
+    },250);
+  }
+
+  async function sendTehnikaModelToTeacher(){
+    if(builderSubmitBusy)return;
+    if(teacherSubmitRemainingMs()>0){
+      startTeacherSubmitCountdown();
+      return;
+    }
+
+    const studentName=(builderStudentName.value || "").trim();
+    const studentClass=(builderStudentClass.value || "").trim();
+    const modelName=(builderModelName.value || "").trim();
+
+    if(!studentName){
+      builderStudentName.focus();
+      setTeacherSubmitStatus("Vpiši ime in priimek učenca.","warn");
+      return;
+    }
+    if(!studentClass){
+      builderStudentClass.focus();
+      setTeacherSubmitStatus("Vpiši razred / oddelek, npr. 8. a.","warn");
+      return;
+    }
+    if(!modelName){
+      builderModelName.focus();
+      setTeacherSubmitStatus("Vpiši ime modela.","warn");
+      return;
+    }
+
+    let data;
+    try{
+      data=builderModelToPortableObject();
+    }catch(err){
+      console.error("Napaka pri pripravi modela za oddajo:",err);
+      setTeacherSubmitStatus(`Modela ne morem pripraviti za oddajo. ${err.message}`,"warn");
+      return;
+    }
+
+    if(!Array.isArray(data.cells) || data.cells.length===0){
+      setTeacherSubmitStatus("Model je prazen. Pred oddajo dodaj vsaj en gradnik.","warn");
+      return;
+    }
+
+    const payload={
+      studentName,
+      studentClass,
+      modelName:data.modelName,
+      clientId:teacherSubmitClientId(),
+      model:JSON.stringify(data,null,2)
+    };
+
+    builderSubmitBusy=true;
+    updateTeacherSubmitUi();
+    setTeacherSubmitStatus("Pošiljam model učitelju …");
+
+    try{
+      await fetch(TEACHER_SUBMIT_URL,{
+        method:"POST",
+        mode:"no-cors",
+        cache:"no-store",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify(payload)
+      });
+
+      submitStorageSet(TEACHER_SUBMIT_LAST_KEY,String(Date.now()));
+      setTeacherSubmitStatus("✓ Oddaja je bila poslana učitelju. Novo oddajo lahko pošlješ čez 60 s.","ok");
+    }catch(err){
+      console.error("Napaka pri pošiljanju modela učitelju:",err);
+      setTeacherSubmitStatus("Oddaje ni bilo mogoče poslati. Preveri internetno povezavo in poskusi znova.","warn");
+    }finally{
+      builderSubmitBusy=false;
+      startTeacherSubmitCountdown();
+    }
+  }
+
 
   function validatePortableModel(data){
     const problems=[];
@@ -3568,15 +4845,13 @@
       problems.push("To ni datoteka formata .tehnikamodel.");
     }
 
-    if(data.version!==TEHNIKA_MODEL_VERSION){
-      problems.push(`Različica modela ${String(data.version)} ni podprta. Ta aplikacija bere različico ${TEHNIKA_MODEL_VERSION}.`);
+    const version=Number(data.version);
+    if(version!==LEGACY_TEHNIKA_MODEL_VERSION && version!==TEHNIKA_MODEL_VERSION){
+      problems.push(`Različica modela ${String(data.version)} ni podprta. Ta aplikacija bere različici 1 in 2.`);
     }
 
-    // Determine file mode. Old v1 files had no cellSizeMm/mode metadata,
-    // so they are interpreted as the original 4×4×4 @ 10 mm format.
     const fileN=Array.isArray(data.gridSize) && data.gridSize.length===3 ? data.gridSize[0] : null;
     const fileCellMm=Number.isFinite(data.cellSizeMm) ? data.cellSizeMm : 10;
-
     const supported=
       (fileN===4 && fileCellMm===10) ||
       (fileN===10 && fileCellMm===5);
@@ -3588,6 +4863,14 @@
       !supported
     ){
       problems.push("Podprta sta samo načina 4×4×4 @ 10 mm in 10×10×10 @ 5 mm.");
+    }
+
+    if(data.objectRotation!==undefined && !isValidBuilderRotationMatrix(data.objectRotation)){
+      problems.push("Zapis orientacije telesa ni veljavna 90° rotacija.");
+    }
+
+    if(data.objectTranslation!==undefined && !isValidBuilderTranslation(data.objectTranslation)){
+      problems.push("Zapis premika celega telesa ni veljaven.");
     }
 
     if(!Array.isArray(data.cells)){
@@ -3618,17 +4901,29 @@
       }
 
       const k=builderKey(cell.x,cell.y,cell.z);
-      if(seen.has(k)){
-        problems.push(`Celica ${k} je v datoteki zapisana več kot enkrat.`);
-      }
+      if(seen.has(k))problems.push(`Celica ${k} je v datoteki zapisana več kot enkrat.`);
       seen.add(k);
 
       if(cell.type!=="full" && cell.type!=="cut"){
         problems.push(`Gradnik ${i+1} ima neznan tip "${String(cell.type)}".`);
+        return;
       }
 
-      if(cell.type==="cut" && !VALID_CUT_DIRS.has(cell.cutDir)){
-        problems.push(`Gradnik ${i+1} ima neznano smer reza "${String(cell.cutDir)}".`);
+      if(cell.type==="cut"){
+        if(version===LEGACY_TEHNIKA_MODEL_VERSION){
+          if(!VALID_CUT_DIRS.has(cell.cutDir)){
+            problems.push(`Gradnik ${i+1} ima neznano staro smer reza "${String(cell.cutDir)}".`);
+          }
+        }else{
+          const v2ok=
+            VALID_CUT_PLANES.has(cell.cutPlane) &&
+            VALID_CUT_TRIS.has(cell.cutTri);
+          // Tolerantno dovolimo tudi legacy cutDir v v2 za ročno migrirane datoteke.
+          const legacyOk=VALID_CUT_DIRS.has(cell.cutDir);
+          if(!v2ok && !legacyOk){
+            problems.push(`Gradnik ${i+1} nima veljavnega zapisa reza.`);
+          }
+        }
       }
     });
 
@@ -3649,8 +4944,6 @@
       throw new Error(first || "Model ni veljaven.");
     }
 
-    // Switch editor mode to match the file BEFORE filling cells.
-    // No confirm here: user explicitly chose to load this file.
     const fileN=data.gridSize[0];
     const fileCellMm=Number.isFinite(data.cellSizeMm) ? data.cellSizeMm : 10;
     builderMode=(fileN===10 && fileCellMm===5) ? BUILDER_MODES.advanced : BUILDER_MODES.basic;
@@ -3658,45 +4951,86 @@
     builderState.layer=0;
     syncBuilderModeUI();
 
+    const version=Number(data.version);
     const next=new Map();
 
     data.cells.forEach(cell=>{
       const k=builderKey(cell.x,cell.y,cell.z);
 
       if(cell.type==="cut"){
-        next.set(k,{kind:"cut",dir:cell.cutDir});
+        let spec=null;
+
+        if(
+          VALID_CUT_PLANES.has(cell.cutPlane) &&
+          VALID_CUT_TRIS.has(cell.cutTri)
+        ){
+          spec={plane:cell.cutPlane,tri:cell.cutTri};
+        }else{
+          spec=legacyCutDirToSpec(cell.cutDir);
+        }
+
+        next.set(k,{kind:"cut",plane:spec.plane,tri:spec.tri});
       }else{
         next.set(k,{kind:"full"});
       }
     });
 
-    // Only now, after full validation, replace the current model.
-    // Tako slaba datoteka ne izbriše otrokovega trenutnega dela.
-    // Loading is a new editing session, so undo history from another grid
-    // mode must not leak into the loaded model.
     builderState.history=[];
     builderState.cells=next;
+
+    // v2 datoteke so shranjene v trenutno vidni WORLD orientaciji, zato
+    // začnejo z identiteto. v1 lahko vsebuje stare eksperimentalne transformacije
+    // in jih zaradi združljivosti še vedno spoštujemo.
+    if(version===LEGACY_TEHNIKA_MODEL_VERSION){
+      builderState.objectRotation=isValidBuilderRotationMatrix(data.objectRotation)
+        ? cloneMat3(data.objectRotation)
+        : cloneMat3(BUILDER_ROT_IDENTITY);
+      builderState.objectTranslation=isValidBuilderTranslation(data.objectTranslation)
+        ? data.objectTranslation.slice()
+        : [0,0,0];
+    }else{
+      builderState.objectRotation=cloneMat3(BUILDER_ROT_IDENTITY);
+      builderState.objectTranslation=[0,0,0];
+    }
+
     markBuilderGeometryChanged();
+
+    if(version===LEGACY_TEHNIKA_MODEL_VERSION && !builderRotationIsIdentity()){
+      if(!isValidBuilderTranslation(data.objectTranslation)){
+        builderState.objectTranslation=
+          builderPackedTranslationForRotation(builderState.objectRotation);
+      }
+
+      const loadedRebase=rebaseBuilderCellsForWorldGrid(
+        builderState.objectRotation,
+        builderState.objectTranslation
+      );
+      if(loadedRebase.ok){
+        builderState.objectTranslation=loadedRebase.translation;
+        markBuilderGeometryChanged();
+      }
+    }
 
     builderModelName.value=
       (typeof data.modelName==="string" && data.modelName.trim())
         ? data.modelName.trim().slice(0,80)
         : "moje_telo";
 
-    // Backward compatible: older .tehnikamodel files simply don't have this field.
     builderStudentName.value=
       (typeof data.studentName==="string" ? data.studentName.trim().slice(0,80) : "");
     syncBuilderAuthorInfo();
 
     builderState.layer=0;
     setBuilderLayer(0);
-    setBuilderView("3d");
+    syncBuilderWorkspaceUI();
     renderLayerGrid();
+
     const loadedAuthor=(builderStudentName.value || "").trim();
+    const legacyNote=version===LEGACY_TEHNIKA_MODEL_VERSION ? " Stara različica v1 je bila varno pretvorjena." : "";
     updateBuilderStatus(
-      loadedAuthor
+      (loadedAuthor
         ? `Naložen model "${builderModelName.value}" · avtor: ${loadedAuthor}.`
-        : `Naložen model "${builderModelName.value}".`
+        : `Naložen model "${builderModelName.value}".`) + legacyNote
     );
   }
 
@@ -3821,8 +5155,9 @@
 
   function collectRawBuilderTriangles(){
     const tris=[];
+    const worldCells=builderWorldCellsSnapshot();
 
-    builderState.cells.forEach((cell,key)=>{
+    worldCells.forEach((cell,key)=>{
       const [x,y,z]=key.split(",").map(Number);
       const faces=primitiveFaces(x,y,z,cell);
       const inside=primitiveInteriorPoint(faces);
@@ -4023,43 +5358,53 @@
   function pointInsideBuilderCell(cell,lx,ly,lz,printSafe=false,hasUpper=false){
     if(cell.kind==="full")return true;
 
-    // Original limited cuts:
-    // xp = top plane z=x
-    // xn = top plane z=1-x
-    // yp = top plane z=y
-    // yn = top plane z=1-y
-    let inside=false;
-    if(cell.dir==="xp")inside=lz<=lx;
-    else if(cell.dir==="xn")inside=lz<=1-lx;
-    else if(cell.dir==="yp")inside=lz<=ly;
-    else inside=lz<=1-ly;
+    const spec=normalizedCutSpec(cell);
+    if(!spec)return false;
+
+    let inside=pointInsideCutSpec(spec,[lx,ly,lz],1e-9);
 
     if(!printSafe || !hasUpper)return inside;
 
-    // Production-only contact plateau.
-    // One unit cell = printSafeSub() voxels. We widen only the HIGH edge
-    // of the wedge, where the original cut reaches z=1.
+    // PRINT-SAFE: samo pri rezih XZ/YZ tipa A/B je zgornji stik z gradnikom
+    // nad njim zgolj rob. Lokalno ga razširimo v zelo ozek plato, enako kot
+    // v prejšnji verziji. Spodnji rezi C/D imajo na z=1 že celo ploskev,
+    // navpični XY rezi pa imajo trikotno naležno ploskev in dodatka ne rabijo.
     const bridge=printSafeBridgeSub()/printSafeSub();
 
-    if(cell.dir==="xp" && lx>=1-bridge)return true;
-    if(cell.dir==="xn" && lx<=bridge)return true;
-    if(cell.dir==="yp" && ly>=1-bridge)return true;
-    if(cell.dir==="yn" && ly<=bridge)return true;
+    if(spec.plane==="xz" && spec.tri==="a" && lx>=1-bridge)return true;
+    if(spec.plane==="xz" && spec.tri==="b" && lx<=bridge)return true;
+    if(spec.plane==="yz" && spec.tri==="a" && ly>=1-bridge)return true;
+    if(spec.plane==="yz" && spec.tri==="b" && ly<=bridge)return true;
 
     return inside;
   }
 
   function analyzePrintSafeAdjustments(){
     const adjusted=[];
+    let worldCells;
 
-    builderState.cells.forEach((cell,key)=>{
+    try{
+      worldCells=builderWorldCellsSnapshot();
+    }catch(_err){
+      return adjusted;
+    }
+
+    worldCells.forEach((cell,key)=>{
       if(cell.kind!=="cut")return;
-
       const [x,y,z]=key.split(",").map(Number);
-      if(cutHasUpperNeighbour(x,y,z)){
+      const upper=z+1<builderMode.n && worldCells.has(builderKey(x,y,z+1));
+      if(!upper)return;
+
+      const spec=normalizedCutSpec(cell);
+      if(
+        spec &&
+        (spec.plane==="xz" || spec.plane==="yz") &&
+        (spec.tri==="a" || spec.tri==="b")
+      ){
         adjusted.push({
           x,y,z,
-          dir:cell.dir,
+          plane:spec.plane,
+          tri:spec.tri,
           reason:"rez pod drugim gradnikom"
         });
       }
@@ -4077,13 +5422,15 @@
     const dim=builderMode.n*sub;
     const data=new Uint8Array(dim*dim*dim);
     let count=0;
+    const worldCells=builderWorldCellsSnapshot();
 
-    builderState.cells.forEach((cell,key)=>{
+    worldCells.forEach((cell,key)=>{
       const [cx,cy,cz]=key.split(",").map(Number);
-      const upper=(cell.kind==="cut") && cutHasUpperNeighbour(cx,cy,cz);
+      const upper=
+        cell.kind==="cut" &&
+        cz+1<builderMode.n &&
+        worldCells.has(builderKey(cx,cy,cz+1));
 
-      // Sampling at voxel centers.
-      // Boundary errors are therefore <= half voxel = 0.25 mm.
       for(let ix=0;ix<sub;ix++){
         const lx=(ix+.5)/sub;
         for(let iy=0;iy<sub;iy++){
@@ -4300,47 +5647,12 @@
       ];
     }
 
-    if(cell.dir==="xp"){
-      return [
-        [[X,Y,Z],[X+1,Y,Z],[X+1,Y+1,Z],[X,Y+1,Z]],
-        [[X,Y,Z],[X+1,Y,Z],[X+1,Y,Z+1]],
-        [[X,Y+1,Z],[X+1,Y+1,Z+1],[X+1,Y+1,Z]],
-        [[X+1,Y,Z],[X+1,Y+1,Z],[X+1,Y+1,Z+1],[X+1,Y,Z+1]],
-        [[X,Y,Z],[X,Y+1,Z],[X+1,Y+1,Z+1],[X+1,Y,Z+1]]
-      ];
-    }
+    const spec=normalizedCutSpec(cell);
+    if(!spec)return [];
 
-    if(cell.dir==="xn"){
-      return [
-        [[X,Y,Z],[X+1,Y,Z],[X+1,Y+1,Z],[X,Y+1,Z]],
-        [[X,Y,Z],[X,Y,Z+1],[X+1,Y,Z]],
-        [[X,Y+1,Z],[X+1,Y+1,Z],[X,Y+1,Z+1]],
-        [[X,Y,Z],[X,Y+1,Z],[X,Y+1,Z+1],[X,Y,Z+1]],
-        [[X,Y,Z+1],[X,Y+1,Z+1],[X+1,Y+1,Z],[X+1,Y,Z]]
-      ];
-    }
-
-    if(cell.dir==="yp"){
-      return [
-        [[X,Y,Z],[X+1,Y,Z],[X+1,Y+1,Z],[X,Y+1,Z]],
-        [[X,Y,Z],[X+1,Y,Z],[X+1,Y+1,Z+1],[X,Y+1,Z+1]],
-        [[X,Y,Z],[X,Y+1,Z],[X,Y+1,Z+1]],
-        [[X+1,Y,Z],[X+1,Y+1,Z+1],[X+1,Y+1,Z]],
-        [[X,Y+1,Z],[X+1,Y+1,Z],[X+1,Y+1,Z+1],[X,Y+1,Z+1]]
-      ];
-    }
-
-    // yn = visoka stran je pri y=0, nizka stran pri y=1.
-    // Ta wedge ima 5 ploskev: dno, sprednji pravokotnik, 2 trikotnika
-    // in eno poševno ploskev. No sixth face on y=1, ker se tam višina
-    // zniža na 0 in ostane samo rob.
-    return [
-      [[X,Y,Z],[X+1,Y,Z],[X+1,Y+1,Z],[X,Y+1,Z]],                 // bottom
-      [[X,Y,Z],[X+1,Y,Z],[X+1,Y,Z+1],[X,Y,Z+1]],                 // high side y=0
-      [[X,Y,Z],[X,Y+1,Z],[X,Y,Z+1]],                             // left triangle
-      [[X+1,Y,Z],[X+1,Y,Z+1],[X+1,Y+1,Z]],                       // right triangle
-      [[X,Y,Z+1],[X+1,Y,Z+1],[X+1,Y+1,Z],[X,Y+1,Z]]              // slope
-    ];
+    return cutSpecUnitFaces(spec).map(face=>
+      face.map(p=>[X+p[0],Y+p[1],Z+p[2]])
+    );
   }
 
   /*
@@ -4381,6 +5693,19 @@
     return faces;
   }
 
+  function orientedBuilderFaces(){
+    const cacheKey=`orientedFaces|${builderState.projectionRevision}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    const faces=allBuilderFaces().map(f=>({
+      ...f,
+      pts:f.pts.map(transformBuilderPoint)
+    }));
+
+    builderProjectionCache.set(cacheKey,faces);
+    return faces;
+  }
+
   // 3D builder camera. Orthographic camera, ker želimo tehniški občutek,
   // ne perspective distortion. Drag only changes yaw/pitch.
   /*
@@ -4403,14 +5728,15 @@
     if(Math.hypot(...right)<0.01)right=[1,0,0];
     const up=norm(cross(right,viewDir));
 
-    const focus=[builderMode.n/2,builderMode.n/2,builderMode.n/2];
-
-    // Fit the entire mode bounding cube at zoom=1. This works for both
-    // 4×4×4 and 10×10×10 and for every allowed yaw/pitch.
+    // 3D display ima še en referenčni pas pred modelom:
+    // model sam ostane na koordinatah 0..n, prikazna mreža pa sega od -1 do n.
     const n=builderMode.n;
+    const focus=[(n-1)/2,(n-1)/2,n/2];
+
+    // Fit upošteva tudi referenčni pas, da ostane celotna 3D mreža vidna.
     const corners=[
-      [0,0,0],[n,0,0],[0,n,0],[n,n,0],
-      [0,0,n],[n,0,n],[0,n,n],[n,n,n]
+      [-1,-1,0],[n,-1,0],[-1,n,0],[n,n,0],
+      [-1,-1,n],[n,-1,n],[-1,n,n],[n,n,n]
     ];
     const uv=corners.map(p=>{
       const q=vSub(p,focus);
@@ -4479,36 +5805,76 @@
   function drawBuilderBaseGrid(cam){
     bctx.save();
 
+    /*
+      3D DISPLAY GRID
+      ----------------
+      Enaka logika kot v "Tloris aktivne plasti":
+        - modelne koordinate ostanejo 0..n-1,
+        - pred modelom je 1 vizualno referenčno polje,
+        - zato prikazana osnovna mreža sega od -1 do n.
+
+      Pas x=-1..0 in pas y=-1..0 sta samo vizualna pomoč.
+      Nista del modela in se nikamor ne shranjujeta.
+    */
+    const min=-1;
+    const max=builderMode.n;
+
+    // Najprej rahlo potemnimo referenčni "L" ob oseh.
+    // Narišemo dva pravokotnika brez dvojnega prekrivanja v notranjem delu.
+    const refFill="rgba(54,95,118,.10)";
+
+    drawBuilderPoly(
+      [[min,min,0],[0,min,0],[0,max,0],[min,max,0]],
+      cam,refFill,null,0
+    );
+    drawBuilderPoly(
+      [[0,min,0],[max,min,0],[max,0,0],[0,0,0]],
+      cam,refFill,null,0
+    );
+
     // 1 enota = 1 kocka = 1 glavno mrežno polje.
     // Vmesne pomožne črte so na polovici, glavne so temnejše.
-    for(let t=0; t<=builderMode.n+1e-9; t+=0.5){
+    for(let t=min; t<=max+1e-9; t+=0.5){
       const tt=Math.round(t*2)/2;
       const isMajor=Math.abs(tt-Math.round(tt))<1e-9;
       bctx.lineWidth=isMajor?1.35:0.8;
       bctx.strokeStyle=isMajor?"rgba(47,76,91,.38)":"rgba(47,76,91,.15)";
 
-      let a=bProject([tt,0,0],cam),b=bProject([tt,builderMode.n,0],cam);
+      let a=bProject([tt,min,0],cam),b=bProject([tt,max,0],cam);
       bctx.beginPath();bctx.moveTo(a.x,a.y);bctx.lineTo(b.x,b.y);bctx.stroke();
 
-      a=bProject([0,tt,0],cam);b=bProject([builderMode.n,tt,0],cam);
+      a=bProject([min,tt,0],cam);b=bProject([max,tt,0],cam);
       bctx.beginPath();bctx.moveTo(a.x,a.y);bctx.lineTo(b.x,b.y);bctx.stroke();
     }
 
-    // Aktivna plast: pomožna mreža na izbrani višini.
+    // Meji med referenčnim pasom in aktivnim modelnim območjem malo poudarimo.
+    bctx.strokeStyle="rgba(47,76,91,.62)";
+    bctx.lineWidth=1.55;
+
+    let a=bProject([0,min,0],cam),b=bProject([0,max,0],cam);
+    bctx.beginPath();bctx.moveTo(a.x,a.y);bctx.lineTo(b.x,b.y);bctx.stroke();
+
+    a=bProject([min,0,0],cam);b=bProject([max,0,0],cam);
+    bctx.beginPath();bctx.moveTo(a.x,a.y);bctx.lineTo(b.x,b.y);bctx.stroke();
+
+    // Aktivna plast je del FIKSNEGA sestavljalnega prostora, ne del telesa.
+    // Zato se pri 90° obračanju telesa ne sme vrteti skupaj z njim.
     const z=builderState.layer;
     bctx.setLineDash([5,5]);
-    for(let t=0; t<=builderMode.n+1e-9; t+=0.5){
+
+    for(let t=min; t<=max+1e-9; t+=0.5){
       const tt=Math.round(t*2)/2;
       const isMajor=Math.abs(tt-Math.round(tt))<1e-9;
       bctx.lineWidth=isMajor?1.15:0.7;
       bctx.strokeStyle=isMajor?"rgba(39,91,122,.30)":"rgba(39,91,122,.12)";
 
-      let a=bProject([tt,0,z],cam),b=bProject([tt,builderMode.n,z],cam);
+      let a=bProject([tt,min,z],cam),b=bProject([tt,max,z],cam);
       bctx.beginPath();bctx.moveTo(a.x,a.y);bctx.lineTo(b.x,b.y);bctx.stroke();
 
-      a=bProject([0,tt,z],cam);b=bProject([builderMode.n,tt,z],cam);
+      a=bProject([min,tt,z],cam);b=bProject([max,tt,z],cam);
       bctx.beginPath();bctx.moveTo(a.x,a.y);bctx.lineTo(b.x,b.y);bctx.stroke();
     }
+
     bctx.setLineDash([]);
     bctx.restore();
   }
@@ -4537,7 +5903,7 @@
     const cam=builderCamera();
     drawBuilderBaseGrid(cam);
 
-    const faces=allBuilderFaces().map(f=>{
+    const faces=orientedBuilderFaces().map(f=>{
       const n=faceNormal(f.pts);
       return {...f,n,depth:f.pts.reduce((s,p)=>s+bProject(p,cam).d,0)/f.pts.length};
     });
@@ -4549,9 +5915,10 @@
       drawBuilderPoly(f.pts,cam,builderFaceColor(f.n),"#2d4653",1.05);
     });
 
-    // Bounding-cube corner axes for the active mode.
-    const O=bProject([0,0,0],cam);
-    [["x",[builderMode.n,0,0]],["y",[0,builderMode.n,0]],["z",[0,0,builderMode.n]]].forEach(([label,p])=>{
+    // Osi izhajajo iz zunanjega vogala referenčnega pasu.
+    // Model sam še vedno uporablja koordinate 0..n.
+    const O=bProject([-1,-1,0],cam);
+    [["x",[builderMode.n,-1,0]],["y",[-1,builderMode.n,0]],["z",[-1,-1,builderMode.n]]].forEach(([label,p])=>{
       const P=bProject(p,cam);
       bctx.save();
       bctx.strokeStyle="#365f76";
@@ -4652,15 +6019,75 @@
     Kasneje boundary logic odloči kateri robovi so dejanski zunanji robovi.
   */
   function projectionPolygons(view){
+    /*
+      TOČEN ODTIS 12 REZOV
+      --------------------
+      Vsak projekcijski kvadrat delimo z obema diagonalama v 4 mikrotrikotnike.
+      To omogoči točen union več gradnikov v isti projekcijski koloni in hkrati
+      zagotovi, da se skupni robovi sosednjih celic vedno razdelijo na enake
+      polovične segmente. Zato outline ne dobi lažnih črt.
+    */
+    const masks={
+      a:(1<<0)|(1<<1), // spodaj + desno
+      b:(1<<0)|(1<<3), // spodaj + levo
+      c:(1<<2)|(1<<3), // zgoraj + levo
+      d:(1<<2)|(1<<1)  // zgoraj + desno
+    };
+    const viewPlane=view==="front"?"xz":view==="side"?"yz":"xy";
     const polys=[];
+
+    function cellAtDepth(a,b,d){
+      if(view==="front")return builderState.cells.get(builderKey(a,d,b));
+      if(view==="side")return builderState.cells.get(builderKey(d,a,b));
+      return builderState.cells.get(builderKey(a,b,d));
+    }
 
     for(let a=0;a<builderMode.n;a++){
       for(let b=0;b<builderMode.n;b++){
-        const shape=projectionCellShape(view,a,b);
-        const poly=polygonForProjectionCell(view,a,b,shape);
-        if(poly)polys.push(poly);
+        let mask=0;
+
+        for(let d=0;d<builderMode.n && mask!==15;d++){
+          const cell=cellAtDepth(a,b,d);
+          if(!cell)continue;
+
+          if(cell.kind==="full"){
+            mask=15;
+            break;
+          }
+
+          const spec=normalizedCutSpec(cell);
+          if(!spec){
+            mask=15;
+            break;
+          }
+
+          // Rezni klin je prizma. Samo pogled, ki je vzporeden njegovi rezni
+          // ravnini, vidi trikotnik; druga dva pogleda vidita cel kvadrat.
+          if(spec.plane!==viewPlane){
+            mask=15;
+            break;
+          }
+
+          mask |= masks[spec.tri] || 0;
+        }
+
+        if(mask===0)continue;
+
+        const C=[a+.5,b+.5];
+        const p00=[a,b], p10=[a+1,b], p11=[a+1,b+1], p01=[a,b+1];
+        const micro=[
+          [p00,p10,C],
+          [p10,p11,C],
+          [p11,p01,C],
+          [p01,p00,C]
+        ];
+
+        for(let bit=0;bit<4;bit++){
+          if(mask&(1<<bit))polys.push(micro[bit]);
+        }
       }
     }
+
     return polys;
   }
 
@@ -4732,8 +6159,11 @@
         best={depth,normalKey};
         return;
       }
-      const nearer=view==="top" ? depth>best.depth : depth<best.depth;
-      if(nearer)best={depth,normalKey};
+
+      // Fiksne smeri gledanja:
+      // front iz +Y, top iz +Z, side iz +X.
+      // Zato je pri vseh pogledih bližje VEČJA koordinata globine.
+      if(depth>best.depth)best={depth,normalKey};
     }
 
     if(view==="top"){
@@ -4757,53 +6187,62 @@
     }
 
     if(view==="front"){
-      // u=x, v=z, kamera je na -y in gleda proti +y.
+      // NARIS: vedno gledamo iz +Y proti -Y.
+      // u=x, v=z. Pri polni kocki je najbližja ploskev na y+1.
       const x=a,z=b,fx=fu,fz=fv;
+
       for(let y=0;y<n;y++){
         const cell=builderState.cells.get(builderKey(x,y,z));
         if(!cell)continue;
 
         if(cell.kind==="full"){
-          consider(y,"front-flat");
+          consider(y+1,"front-flat");
           continue;
         }
 
+        // X reza ne spreminjata globine po Y; če je točka znotraj klina,
+        // je najbližja +Y ploskev še vedno y+1.
         if(cell.dir==="xp"){
-          if(fz<=fx+EPS)consider(y,"front-flat");
+          if(fz<=fx+EPS)consider(y+1,"front-flat");
         }else if(cell.dir==="xn"){
-          if(fz<=1-fx+EPS)consider(y,"front-flat");
+          if(fz<=1-fx+EPS)consider(y+1,"front-flat");
         }else if(cell.dir==="yp"){
-          // solid: zLocal <= yLocal -> first hit is the slope at yLocal=zLocal
-          if(fz<=1+EPS)consider(y+fz,"slope-yp");
+          // yp je visok na +Y strani, zato vidimo ravno ploskev pri y+1.
+          if(fz<=1+EPS)consider(y+1,"front-flat");
         }else{
-          // yn is high at y=0, zato prednja ravna ploskev ostane nearest face.
-          if(fz<=1+EPS)consider(y,"front-flat");
+          // yn je visok pri y=0. Gledano iz +Y najprej zadenemo poševno ploskev:
+          // zLocal <= 1-yLocal  ->  yLocal = 1-zLocal.
+          if(fz<=1+EPS)consider(y+1-fz,"slope-yn");
         }
       }
       return best;
     }
 
-    // side: u=y, v=z, kamera je na -x in gleda proti +x.
+    // STRANSKI RIS: vedno gledamo z leve, torej iz +X proti -X.
+    // u=y, v=z. Pri polni kocki je najbližja ploskev na x+1.
     const y=a,z=b,fy=fu,fz=fv;
+
     for(let x=0;x<n;x++){
       const cell=builderState.cells.get(builderKey(x,y,z));
       if(!cell)continue;
 
       if(cell.kind==="full"){
-        consider(x,"side-flat");
+        consider(x+1,"side-flat");
         continue;
       }
 
+      // Y reza ne spreminjata globine po X.
       if(cell.dir==="yp"){
-        if(fz<=fy+EPS)consider(x,"side-flat");
+        if(fz<=fy+EPS)consider(x+1,"side-flat");
       }else if(cell.dir==="yn"){
-        if(fz<=1-fy+EPS)consider(x,"side-flat");
+        if(fz<=1-fy+EPS)consider(x+1,"side-flat");
       }else if(cell.dir==="xp"){
-        // solid: zLocal <= xLocal -> first hit is slope xLocal=zLocal
-        if(fz<=1+EPS)consider(x+fz,"slope-xp");
+        // xp je visok na +X strani, zato vidimo ravno ploskev pri x+1.
+        if(fz<=1+EPS)consider(x+1,"side-flat");
       }else{
-        // xn is high at x=0 -> ravna leva ploskev je nearest face.
-        if(fz<=1+EPS)consider(x,"side-flat");
+        // xn je visok pri x=0. Gledano iz +X najprej zadenemo poševno ploskev:
+        // zLocal <= 1-xLocal  ->  xLocal = 1-zLocal.
+        if(fz<=1+EPS)consider(x+1-fz,"slope-xn");
       }
     }
     return best;
@@ -4874,18 +6313,17 @@
         return;
       }
       const old=profile.get(k);
-      if(view==="top"){
-        if(depth>old.depth)old.depth=depth;
-      }else if(depth<old.depth){
-        old.depth=depth;
-      }
+
+      // Builder uporablja fiksne smeri iz pozitivnih osi:
+      // +Y za naris, +Z za tloris, +X za stranski ris.
+      if(depth>old.depth)old.depth=depth;
     }
 
     builderState.cells.forEach((cell,key)=>{
       const [x,y,z]=key.split(",").map(Number);
       if(view==="top")put(x,y,z+1);
-      else if(view==="front")put(x,z,y);
-      else put(y,z,x);
+      else if(view==="front")put(x,z,y+1);
+      else put(y,z,x+1);
     });
 
     const edges=[];
@@ -4922,14 +6360,17 @@
 
 
   /*
-    BUILDER HIDDEN EDGES – v18
-    --------------------------
-    Za model, sestavljen samo iz FULL kock, lahko uporabimo isti exact voxel
-    hidden-edge engine kot v učnem delu. Ko so prisotni CUT gradniki, hidden
-    edge namenoma še ne ugibamo: pri poševnih ploskvah bi napačna črtkana
-    diagonala učenca naučila več narobe kot manjkajoča napredna funkcija.
+    LEGACY BUILDER HIDDEN EDGES – v18
+    ---------------------------------
+    Ta funkcija je ohranjena zaradi starega razvojnega toka, vendar je trenutni
+    renderer NE kliče več. Aktivna pot za projekcije je:
+      builderOrientedProjectionGeometry()
+        -> builderFeatureEdges3DOriented()
+        -> builderAxisFeatureEdges3DOriented()       // FULL/CUT axis robovi v20 + CUT seam filter v21
+        -> builderCutFaceBoundaryEdges3DOriented()   // poševni CUT robovi v19
+        -> splitBuilderFeatureEdgeByVisibility()
 
-    Visible cut edges iz v17 ostanejo popolnoma aktivni.
+    Zato spodnja stara omejitev za CUT gradnike ni več opis trenutnega rendererja.
   */
   function computeBuilderHiddenEdges(view){
     const cacheKey=`hidden|${builderState.projectionRevision}|${builderMode.id}|${view}`;
@@ -4952,7 +6393,9 @@
       cubes.push([x,y,z]);
     });
 
-    const hidden=voxelHiddenEdgesGrid(cubes,view);
+    // Builder ima svojo fiksno tehniško smer pogleda:
+    // front +Y -> -Y, top +Z -> -Z, side +X -> -X.
+    const hidden=voxelHiddenEdgesGrid(cubes,view,true);
     builderProjectionCache.set(cacheKey,hidden);
     return hidden;
   }
@@ -5035,6 +6478,1025 @@
     return edges;
   }
 
+  /*
+    ORIENTED BUILDER PROJECTION ENGINE
+    ----------------------------------
+    The original projection engine is intentionally axis-specialised because
+    it is fast for editable full/cut cells. Whole-object 90° turns add one
+    extra requirement: after a pitch, a former "top" wedge can face sideways.
+
+    Instead of rewriting the cell format, we keep the exact primitive geometry
+    and rotate it rigidly. For the flat sheet:
+      - fill / silhouette still reuse the exact cell projection polygons,
+        merely mapped through the 90° orientation;
+      - technical 3D feature edges come from the rotated exterior faces;
+      - visibility is classified against the nearest occupied surface along
+        the fixed world view ray (+Y for naris, +Z for tloris, +X for side).
+
+    This works for disconnected pieces too because every point uses the same
+    rigid matrix around the centre of the builder cube.
+  */
+  function builderWorldViewDepthVector(view){
+    if(view==="front")return [0,1,0];
+    if(view==="top")return [0,0,1];
+    return [1,0,0];
+  }
+
+  function builderProjectWorldRaw(view,p){
+    if(view==="front")return {q:[p[0],p[2]],depth:p[1]};
+    if(view==="top")return {q:[p[0],p[1]],depth:p[2]};
+    return {q:[p[1],p[2]],depth:p[0]};
+  }
+
+  function builderWorldPointFromRaw(view,u,v,depth){
+    if(view==="front")return [u,depth,v];
+    if(view==="top")return [u,v,depth];
+    return [depth,u,v];
+  }
+
+  function builderModelDepthSpecForWorldView(view){
+    const localDir=mulMat3Vec(
+      transposeMat3(builderState.objectRotation),
+      builderWorldViewDepthVector(view)
+    );
+
+    let axis=0;
+    if(Math.abs(localDir[1])>0.5)axis=1;
+    else if(Math.abs(localDir[2])>0.5)axis=2;
+
+    return {
+      axis,
+      sign:localDir[axis]>=0?1:-1,
+      canonicalView:axis===0?"side":axis===1?"front":"top"
+    };
+  }
+
+  function embedCanonicalProjectionPoint(canonicalView,p,depthValue){
+    if(canonicalView==="front")return [p[0],depthValue,p[1]];
+    if(canonicalView==="top")return [p[0],p[1],depthValue];
+    return [depthValue,p[0],p[1]];
+  }
+
+  function mapCanonicalProjectionPointToWorld(view,canonicalView,p){
+    // Any depth value works because the local depth axis maps exactly onto the
+    // world view axis after a 90° cube rotation. Centre keeps numbers tidy.
+    const local=embedCanonicalProjectionPoint(canonicalView,p,builderMode.n/2);
+    return builderProjectWorldRaw(view,transformBuilderPoint(local)).q;
+  }
+
+  function builderOrientedFillPolygons(view){
+    const spec=builderModelDepthSpecForWorldView(view);
+    return projectionPolygons(spec.canonicalView).map(poly=>
+      poly.map(p=>mapCanonicalProjectionPointToWorld(view,spec.canonicalView,p))
+    );
+  }
+
+  function builderOrientedBoundaryEdges(view){
+    const spec=builderModelDepthSpecForWorldView(view);
+    return projectionBoundaryEdges(spec.canonicalView).map(([a,b])=>[
+      mapCanonicalProjectionPointToWorld(view,spec.canonicalView,a),
+      mapCanonicalProjectionPointToWorld(view,spec.canonicalView,b)
+    ]);
+  }
+
+  function builderFeatureEdges3DOriented(){
+    const cacheKey=`feature3d|${builderState.projectionRevision}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    const buckets=new Map();
+    const EPS=1e-7;
+
+    function pointKey(p){
+      return p.map(v=>Number(v.toFixed(8))).join(",");
+    }
+
+    function key(a,b){
+      const A=pointKey(a),B=pointKey(b);
+      return A<B?`${A}|${B}`:`${B}|${A}`;
+    }
+
+    orientedBuilderFaces().forEach(face=>{
+      const normal=faceNormal(face.pts);
+      for(let i=0;i<face.pts.length;i++){
+        const a=face.pts[i],b=face.pts[(i+1)%face.pts.length];
+        const k=key(a,b);
+        if(!buckets.has(k))buckets.set(k,{a,b,normals:[]});
+        buckets.get(k).normals.push(normal);
+      }
+    });
+
+    const edges=[];
+    buckets.forEach(edge=>{
+      const ns=edge.normals;
+      let feature=ns.length===1;
+
+      if(!feature){
+        outer:
+        for(let i=0;i<ns.length;i++){
+          for(let j=i+1;j<ns.length;j++){
+            if(Math.abs(dot(ns[i],ns[j]))<1-EPS){
+              feature=true;
+              break outer;
+            }
+          }
+        }
+      }
+
+      if(feature)edges.push({a:edge.a,b:edge.b});
+    });
+
+    builderProjectionCache.set(cacheKey,edges);
+    return edges;
+  }
+
+  function builderNearestModelAxisDepth(axis,sign,pModel){
+    const n=builderMode.n;
+    const EPS=1e-7;
+
+    function cellInterval(cell,fx,fy,fz){
+      if(!cell)return null;
+      if(cell.kind==="full")return [0,1];
+
+      const spec=normalizedCutSpec(cell);
+      if(!spec)return null;
+
+      const h=cutSpecHalfspace(spec);
+      const p=[fx,fy,fz];
+      const na=h.n[axis];
+
+      let rhs=h.c;
+      for(let i=0;i<3;i++){
+        if(i!==axis)rhs-=h.n[i]*p[i];
+      }
+
+      if(Math.abs(na)<EPS){
+        // Rezni pogoj ne vsebuje globinske osi: celoten ray-segment je
+        // bodisi znotraj bodisi zunaj trikotne prizme.
+        return rhs>=-EPS ? [0,1] : null;
+      }
+
+      const t=rhs/na;
+      let lo=0,hi=1;
+
+      if(na>0)hi=Math.min(hi,t);
+      else lo=Math.max(lo,t);
+
+      lo=Math.max(0,lo);
+      hi=Math.min(1,hi);
+
+      if(hi-lo<=EPS)return null;
+      return [lo,hi];
+    }
+
+    const fixed=[pModel[0],pModel[1],pModel[2]];
+    const transverse=axis===0?[1,2]:axis===1?[0,2]:[0,1];
+
+    for(const t of transverse){
+      if(fixed[t]<-EPS || fixed[t]>n+EPS)return null;
+      fixed[t]=clamp(fixed[t],0,n-EPS);
+    }
+
+    const idx0=Math.min(n-1,Math.max(0,Math.floor(fixed[0])));
+    const idx1=Math.min(n-1,Math.max(0,Math.floor(fixed[1])));
+    const idx2=Math.min(n-1,Math.max(0,Math.floor(fixed[2])));
+
+    let best=null;
+
+    for(let d=0;d<n;d++){
+      const ix=axis===0?d:idx0;
+      const iy=axis===1?d:idx1;
+      const iz=axis===2?d:idx2;
+      const cell=builderState.cells.get(builderKey(ix,iy,iz));
+      if(!cell)continue;
+
+      const fx=fixed[0]-ix;
+      const fy=fixed[1]-iy;
+      const fz=fixed[2]-iz;
+      const interval=cellInterval(cell,fx,fy,fz);
+      if(!interval)continue;
+
+      const depth=d+(sign>0?interval[1]:interval[0]);
+      if(best===null || (sign>0?depth>best:depth<best))best=depth;
+    }
+
+    return best;
+  }
+
+  function builderNearestWorldDepth(view,u,v){
+    const spec=builderModelDepthSpecForWorldView(view);
+    const world0=builderWorldPointFromRaw(view,u,v,0);
+    const model0=inverseTransformBuilderPoint(world0);
+    const dLocal=builderNearestModelAxisDepth(spec.axis,spec.sign,model0);
+    if(dLocal===null)return null;
+
+    const hit=[model0[0],model0[1],model0[2]];
+    hit[spec.axis]=dLocal;
+    const worldHit=transformBuilderPoint(hit);
+    return builderProjectWorldRaw(view,worldHit).depth;
+  }
+
+  function builderCutFaceBoundaryEdges3DOriented(){
+    /*
+      SKRITI ROBOVI REZANIH GRADNIKOV – v19
+      --------------------------------------
+      Najprej odgovorimo na geometrijsko vprašanje:
+        "Ali je ta črta sploh pravi rob KONČNEGA telesa?"
+
+      Šele nato jo splitBuilderFeatureEdgeByVisibility() razvrsti na vidni
+      oziroma skriti del.
+
+      Zakaj je to pomembno?
+      Več sosednjih CUT gradnikov lahko skupaj tvori ENO samo neprekinjeno
+      poševno ploskev. Skupni rob med dvema koplanarnima poševnima ploskvama
+      je samo sestavljalni seam mreže in v tehniški risbi NE SME postati
+      črtkana črta.
+
+      Postopek:
+        1) iz vseh CUT gradnikov vzamemo samo njihove poševne rezne ploskve,
+        2) vsak 3D rob zberemo skupaj z normalami ploskev, ki ga uporabljajo,
+        3) skupni rob koplanarnih ploskev zavržemo,
+        4) pravi mejni rob oziroma pregib obdržimo,
+        5) zaporedne kolinearne segmente istega pravega roba združimo.
+
+      Rezultat so samo resnični 3D feature robovi poševnih reznih površin.
+      Njihova vidnost se določi šele v naslednjem koraku.
+    */
+    const cacheKey=`cutFaceEdges3d|${builderState.projectionRevision}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    const EPS=1e-7;
+    const buckets=new Map();
+
+    function pointKey(p){
+      return p.map(v=>Number(v.toFixed(8))).join(",");
+    }
+
+    function edgeKey(a,b){
+      const A=pointKey(a),B=pointKey(b);
+      return A<B?`${A}|${B}`:`${B}|${A}`;
+    }
+
+    /*
+      Združi samo segmente, ki:
+        - ležijo na isti 3D premici in
+        - se prekrivajo ali stikajo v krajišču.
+
+      Preskok čez praznino ni dovoljen. Tako npr. rob vzdolž štirih sosednjih
+      CUT celic postane en sam tehniški rob, dva ločena roba pa ostaneta ločena.
+    */
+    function mergeCollinearFeatureEdges(edges){
+      const groups=new Map();
+
+      function keyNumber(v){
+        const n=Number(v.toFixed(7));
+        return Math.abs(n)<EPS?0:n;
+      }
+
+      edges.forEach(edge=>{
+        const a=edge.a,b=edge.b;
+        const d=vSub(b,a);
+        const len=Math.hypot(d[0],d[1],d[2]);
+        if(len<1e-8)return;
+
+        let u=[d[0]/len,d[1]/len,d[2]/len];
+
+        // Kanonična smer premice: prvi nen ničelni člen je pozitiven.
+        for(let i=0;i<3;i++){
+          if(Math.abs(u[i])<=EPS)continue;
+          if(u[i]<0)u=u.map(v=>-v);
+          break;
+        }
+
+        const ta=dot(a,u);
+        const tb=dot(b,u);
+
+        // Najbližja točka premice koordinatnemu izhodišču.
+        // Za vse točke na isti premici je base enak.
+        const base=[
+          a[0]-u[0]*ta,
+          a[1]-u[1]*ta,
+          a[2]-u[2]*ta
+        ];
+
+        const k=[
+          keyNumber(u[0]),keyNumber(u[1]),keyNumber(u[2]),
+          keyNumber(base[0]),keyNumber(base[1]),keyNumber(base[2])
+        ].join(",");
+
+        if(!groups.has(k)){
+          groups.set(k,{u,base,intervals:[]});
+        }
+
+        groups.get(k).intervals.push([
+          Math.min(ta,tb),
+          Math.max(ta,tb)
+        ]);
+      });
+
+      const out=[];
+
+      function cleanPoint(p){
+        return p.map(v=>{
+          // Po 90° rotacijah so krajišča še vedno na celoštevilski mreži.
+          // Snap odstranimo samo numerični šum, ne spreminjamo geometrije.
+          const r=Math.round(v);
+          return Math.abs(v-r)<1e-7?r:v;
+        });
+      }
+
+      groups.forEach(g=>{
+        g.intervals.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+        let cur=null;
+
+        function emit(iv){
+          if(!iv || iv[1]-iv[0]<1e-8)return;
+          const a=[
+            g.base[0]+g.u[0]*iv[0],
+            g.base[1]+g.u[1]*iv[0],
+            g.base[2]+g.u[2]*iv[0]
+          ];
+          const b=[
+            g.base[0]+g.u[0]*iv[1],
+            g.base[1]+g.u[1]*iv[1],
+            g.base[2]+g.u[2]*iv[1]
+          ];
+          out.push({a:cleanPoint(a),b:cleanPoint(b)});
+        }
+
+        g.intervals.forEach(iv=>{
+          if(!cur){
+            cur=[iv[0],iv[1]];
+            return;
+          }
+
+          // Tu endpoint contact NAMERNO združimo:
+          // po odstranitvi seamov gre za isti neprekinjeni 3D feature rob.
+          if(iv[0]<=cur[1]+EPS){
+            cur[1]=Math.max(cur[1],iv[1]);
+          }else{
+            emit(cur);
+            cur=[iv[0],iv[1]];
+          }
+        });
+
+        emit(cur);
+      });
+
+      return out;
+    }
+
+    let worldCells;
+    try{
+      worldCells=builderWorldCellsSnapshot();
+    }catch(_err){
+      builderProjectionCache.set(cacheKey,[]);
+      return [];
+    }
+
+    worldCells.forEach((cell,key)=>{
+      if(cell.kind!=="cut")return;
+
+      const spec=normalizedCutSpec(cell);
+      if(!spec)return;
+
+      const [x,y,z]=key.split(",").map(Number);
+      const faces=cutSpecUnitFaces(spec);
+
+      faces.forEach(face=>{
+        if(face.length<3)return;
+
+        const n=stlTriangleNormal(face.slice(0,3));
+
+        // Izvirne ploskve kocke so osno poravnane (ena komponenta normale).
+        // Poševna rezna ploskev ima natanko dve nen ničelni komponenti.
+        const nonZero=[Math.abs(n[0]),Math.abs(n[1]),Math.abs(n[2])]
+          .filter(v=>v>EPS).length;
+        if(nonZero<2)return;
+
+        const pts=face.map(p=>[x+p[0],y+p[1],z+p[2]]);
+
+        for(let i=0;i<pts.length;i++){
+          const a=pts[i],b=pts[(i+1)%pts.length];
+          const k=edgeKey(a,b);
+
+          if(!buckets.has(k)){
+            buckets.set(k,{a,b,normals:[]});
+          }
+
+          buckets.get(k).normals.push(n);
+        }
+      });
+    });
+
+    const featureEdges=[];
+
+    buckets.forEach(edge=>{
+      const ns=edge.normals;
+
+      // En incidentni cut-face -> meja poševne površine.
+      let feature=ns.length===1;
+
+      if(!feature){
+        /*
+          Več incidentnih poševnih ploskev:
+          - vse koplanarne (|dot| ~= 1) -> samo notranji seam, zavrzi;
+          - vsaj dve različni normali     -> pravi pregib, obdrži.
+
+          Uporabimo abs(dot), ker je smer normale odvisna od orientacije
+          poligona; za koplanarnost sta +n in -n geometrijsko ista ravnina.
+        */
+        outer:
+        for(let i=0;i<ns.length;i++){
+          for(let j=i+1;j<ns.length;j++){
+            if(Math.abs(dot(ns[i],ns[j]))<1-EPS){
+              feature=true;
+              break outer;
+            }
+          }
+        }
+      }
+
+      if(feature){
+        featureEdges.push({a:edge.a,b:edge.b});
+      }
+    });
+
+    const edges=mergeCollinearFeatureEdges(featureEdges);
+    builderProjectionCache.set(cacheKey,edges);
+    return edges;
+  }
+
+  function splitBuilderFeatureEdgeByVisibility(view,edge){
+    const A=builderProjectWorldRaw(view,edge.a);
+    const B=builderProjectWorldRaw(view,edge.b);
+    const dx=B.q[0]-A.q[0],dy=B.q[1]-A.q[1];
+    const len=Math.hypot(dx,dy);
+
+    // Edge parallel to the ray collapses to a point in this orthographic view.
+    if(len<1e-8)return {visible:[],hidden:[]};
+
+    const nx=-dy/len,ny=dx/len;
+    const EPS_SIDE=0.0015;
+    const EPS_DEPTH=0.0025;
+    // Hidden part of a diagonal can start/end halfway along one cube edge.
+    const subdivisions=Math.max(16,Math.ceil(len*24));
+    const visible=[],hidden=[];
+    let runType=null,runStart=0;
+
+    function point3(t){
+      return [
+        edge.a[0]+(edge.b[0]-edge.a[0])*t,
+        edge.a[1]+(edge.b[1]-edge.a[1])*t,
+        edge.a[2]+(edge.b[2]-edge.a[2])*t
+      ];
+    }
+
+    function point2(t){
+      return [
+        A.q[0]+dx*t,
+        A.q[1]+dy*t
+      ];
+    }
+
+    function classify(tm){
+      const p3=point3(tm);
+      const pr=builderProjectWorldRaw(view,p3);
+      let sawMatter=false;
+      let visibleHere=false;
+      let hiddenHere=false;
+
+      const probes=[
+        [pr.q[0],pr.q[1]],
+        [pr.q[0]+nx*EPS_SIDE,pr.q[1]+ny*EPS_SIDE],
+        [pr.q[0]-nx*EPS_SIDE,pr.q[1]-ny*EPS_SIDE]
+      ];
+
+      for(const [u,v] of probes){
+        const nearest=builderNearestWorldDepth(view,u,v);
+        if(nearest===null)continue;
+        sawMatter=true;
+
+        if(pr.depth>=nearest-EPS_DEPTH)visibleHere=true;
+        else if(nearest>pr.depth+EPS_DEPTH)hiddenHere=true;
+      }
+
+      if(visibleHere)return "visible";
+      if(hiddenHere)return "hidden";
+      // If probes fall just outside a silhouette because of floating-point
+      // boundaries, a genuine exterior feature should still be drawn solid.
+      return sawMatter?"hidden":"visible";
+    }
+
+    function flush(type,t0,t1){
+      if(!type || t1-t0<1e-9)return;
+      const seg=[point2(t0),point2(t1)];
+      (type==="visible"?visible:hidden).push(seg);
+    }
+
+    for(let i=0;i<subdivisions;i++){
+      const t0=i/subdivisions;
+      const t1=(i+1)/subdivisions;
+      const type=classify((t0+t1)/2);
+
+      if(runType===null){
+        runType=type;
+        runStart=t0;
+      }else if(type!==runType){
+        flush(runType,runStart,t0);
+        runType=type;
+        runStart=t0;
+      }
+    }
+    flush(runType,runStart,1);
+
+    return {visible,hidden};
+  }
+
+    function dedupeBuilderProjectionSegments(segments){
+    /*
+      PROJECTED SEGMENT NORMALIZATION
+      -------------------------------
+      Različni 3D robovi se lahko projicirajo na isti 2D nosilec. Če isti
+      skriti segment narišemo večkrat (posebej še v nasprotnih smereh),
+      se črtkani vzorci med seboj zapolnijo in skriti rob izgleda kot polna
+      črta. Zato:
+        - enake/prekrite segmente združimo,
+        - segmentov, ki se samo DOTIKAJO v krajišču, ne združimo.
+
+      Druga točka je pomembna za stranski ris: dva resnična roba, dolga po
+      eno mrežno polje, ostaneta dva roba tudi če se srečata na sredini.
+    */
+    const EPS=1e-7;
+    const groups=new Map();
+
+    function keyNumber(v){
+      const n=Number(v.toFixed(7));
+      return Math.abs(n)<EPS?0:n;
+    }
+
+    segments.forEach(seg=>{
+      if(!seg || seg.length!==2)return;
+
+      const a=seg[0],b=seg[1];
+      let dx=b[0]-a[0],dy=b[1]-a[1];
+      const len=Math.hypot(dx,dy);
+      if(len<1e-8)return;
+
+      let ux=dx/len,uy=dy/len;
+
+      // Canonical direction: isti geometrijski nosilec dobi isto orientacijo.
+      if(ux<-EPS || (Math.abs(ux)<=EPS && uy<0)){
+        ux=-ux;uy=-uy;
+      }
+
+      const nx=-uy,ny=ux;
+      const c=nx*a[0]+ny*a[1];
+      const t0=ux*a[0]+uy*a[1];
+      const t1=ux*b[0]+uy*b[1];
+      const lo=Math.min(t0,t1),hi=Math.max(t0,t1);
+
+      // Rounded values are ONLY for the bucket key. Reconstruction keeps the
+      // original unit vector, so exact grid endpoints do not drift.
+      const key=`${keyNumber(ux)},${keyNumber(uy)}|${keyNumber(c)}`;
+
+      if(!groups.has(key)){
+        groups.set(key,{u:[ux,uy],n:[nx,ny],c,intervals:[]});
+      }
+
+      const g=groups.get(key);
+      // Re-project onto the first segment's exact basis.
+      const gu=g.u,gn=g.n,gc=g.c;
+      const ga0=gu[0]*a[0]+gu[1]*a[1];
+      const ga1=gu[0]*b[0]+gu[1]*b[1];
+      g.intervals.push([Math.min(ga0,ga1),Math.max(ga0,ga1)]);
+    });
+
+    const out=[];
+
+    groups.forEach(g=>{
+      g.intervals.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+      let cur=null;
+
+      function emit(iv){
+        if(!iv || iv[1]-iv[0]<1e-8)return;
+
+        const [ux,uy]=g.u;
+        const [nx,ny]=g.n;
+        const c=g.c;
+
+        const a=[ux*iv[0]+nx*c,uy*iv[0]+ny*c];
+        const b=[ux*iv[1]+nx*c,uy*iv[1]+ny*c];
+
+        // Snap only numerical fuzz close to the half-grid used by our
+        // primitives. This never changes real geometry.
+        function cleanPoint(p){
+          return p.map(v=>{
+            const h=Math.round(v*2)/2;
+            return Math.abs(v-h)<1e-7?h:v;
+          });
+        }
+
+        out.push([cleanPoint(a),cleanPoint(b)]);
+      }
+
+      g.intervals.forEach(iv=>{
+        if(!cur){
+          cur=[iv[0],iv[1]];
+          return;
+        }
+
+        // Positive overlap => same projected piece. Exact endpoint contact
+        // remains two physical segments.
+        if(iv[0] < cur[1]-EPS){
+          cur[1]=Math.max(cur[1],iv[1]);
+        }else{
+          emit(cur);
+          cur=[iv[0],iv[1]];
+        }
+      });
+
+      emit(cur);
+    });
+
+    return out;
+  }
+
+
+  function builderAxisFeatureEdges3DOriented(){
+    /*
+      AXIS-ALIGNED FEATURE EDGES – v20/v21
+      --------------------------------
+      v19 je pravilno odstranil lažne CUT seame, vendar je imel eno pomembno
+      regresijo: takoj ko je model vseboval vsaj en CUT gradnik, se skriti robovi
+      navadnih FULL delov niso več dodajali. Zato so v tlorisu/stranskem risu
+      izginile skrite meje odprtin (npr. luknja pod sedežem klopi, noge stola,
+      stebri pod mostno ploščo).
+
+      Ta funkcija ne sklepa iz tipa gradnika, ampak iz DEJANSKEGA materiala
+      okoli vsakega mrežnega 3D roba:
+        - 1 od 4 kvadrantov poln  -> konveksen tehniški rob,
+        - 3 od 4 polni           -> konkaven tehniški rob (npr. rob odprtine),
+        - 2 nasprotna polna      -> stik po robu; ohranimo kot feature rob,
+        - 2 sosednja polna       -> ravna ploskev; samo mrežni seam, zavržemo,
+        - 0 ali 4                -> roba ni.
+
+      Tako dobimo skrite FULL robove tudi v mešanih FULL+CUT modelih, brez
+      ponovne uvedbe koplanarnih mrežnih črt na poševnih površinah.
+
+      Diagonalni robovi poševnih CUT ploskev ostanejo odgovornost
+      builderCutFaceBoundaryEdges3DOriented(); tu zbiramo samo mrežno
+      poravnane X/Y/Z robove.
+    */
+    const cacheKey=`axisFeature3d|${builderState.projectionRevision}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    const n=builderMode.n;
+    const EPS_SAMPLE=1e-4;
+    const EPS_LINE=1e-7;
+
+    function pointInsideSolidLocal(p){
+      const x=p[0],y=p[1],z=p[2];
+
+      // Proba je vedno rahlo odmaknjena od mrežnega roba, zato lahko
+      // nedvoumno izberemo eno celico.
+      if(x<0 || y<0 || z<0 || x>=n || y>=n || z>=n)return false;
+
+      const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z);
+      const cell=builderState.cells.get(builderKey(ix,iy,iz));
+      if(!cell)return false;
+      if(cell.kind==="full")return true;
+
+      const spec=normalizedCutSpec(cell);
+      if(!spec)return false;
+
+      return pointInsideCutSpec(spec,[x-ix,y-iy,z-iz],1e-9);
+    }
+
+    function isFeaturePattern(q){
+      const count=q.reduce((s,v)=>s+(v?1:0),0);
+
+      if(count===1 || count===3)return true;
+      if(count!==2)return false;
+
+      // Ciklični vrstni red kvadrantov:
+      // 0 = --, 1 = +-, 2 = ++, 3 = -+.
+      // Nasprotna para pomenita dve masi, ki se stikata samo po robu.
+      return (q[0]&&q[2]) || (q[1]&&q[3]);
+    }
+
+    /*
+      v21 – FILTER KOPLANARNIH CUT SEAMOV
+      -----------------------------------
+      v20 axis-feature pass je pravilno vrnil skrite robove odprtin/podvisov,
+      vendar je imel eno preširoko predpostavko: vsak axis-aligned vzorec
+      1/3 oziroma diagonalni 2/2 je obravnaval kot pravi tehniški rob.
+
+      Pri več sosednjih CUT gradnikih lahko skozi isti mrežni rob poteka
+      ENA sama neprekinjena poševna ploskev. Tak rob je samo notranji seam
+      med dvema koplanarnima CUT ploskvama in ne sme postati črtkana črta.
+
+      Zato pred axis-passom zgradimo natančen seznam takih lokalnih seamov:
+        - vzamemo samo poševne ploskve CUT gradnikov,
+        - rob mora biti geometrijsko popolnoma isti,
+        - incidentni poševni ploskvi morata biti koplanarni,
+        - če je prisoten pravi pregib (različni normali), rob NI suppressan.
+
+      Ključna lastnost: filter se nanaša samo na seame poševnih CUT ploskev.
+      Skriti robovi FULL odprtin (klop, stol, most, kavč) zato ostanejo.
+    */
+    function localPointKey(p){
+      return p.map(v=>Number(v.toFixed(8))).join(",");
+    }
+
+    function localEdgeKey(a,b){
+      const A=localPointKey(a),B=localPointKey(b);
+      return A<B?`${A}|${B}`:`${B}|${A}`;
+    }
+
+    function buildCoplanarCutSeamSet(){
+      const seamBuckets=new Map();
+      const EPS_NORMAL=1e-7;
+
+      builderState.cells.forEach((cell,key)=>{
+        if(cell.kind!=="cut")return;
+
+        const spec=normalizedCutSpec(cell);
+        if(!spec)return;
+
+        const [x,y,z]=key.split(",").map(Number);
+
+        cutSpecUnitFaces(spec).forEach(face=>{
+          if(face.length<3)return;
+
+          const nFace=stlTriangleNormal(face.slice(0,3));
+          const nonZero=[
+            Math.abs(nFace[0]),
+            Math.abs(nFace[1]),
+            Math.abs(nFace[2])
+          ].filter(v=>v>EPS_NORMAL).length;
+
+          // Samo poševna rezna ploskev. Osno poravnanih ploskev tu ne
+          // suppressamo, ker nosijo tudi prave robove odprtin/podvisov.
+          if(nonZero<2)return;
+
+          const pts=face.map(p=>[
+            x+p[0],
+            y+p[1],
+            z+p[2]
+          ]);
+
+          for(let i=0;i<pts.length;i++){
+            const a=pts[i],b=pts[(i+1)%pts.length];
+            const k=localEdgeKey(a,b);
+
+            if(!seamBuckets.has(k)){
+              seamBuckets.set(k,{normals:[]});
+            }
+            seamBuckets.get(k).normals.push(nFace);
+          }
+        });
+      });
+
+      const seams=new Set();
+
+      seamBuckets.forEach((entry,k)=>{
+        const ns=entry.normals;
+        if(ns.length<2)return;
+
+        let allCoplanar=true;
+
+        outer:
+        for(let i=0;i<ns.length;i++){
+          for(let j=i+1;j<ns.length;j++){
+            /*
+              abs(dot): +n in -n predstavljata isto geometrijsko ravnino.
+              Če je katerikoli par različnih normal, gre za pravi pregib.
+            */
+            if(Math.abs(dot(ns[i],ns[j]))<1-EPS_NORMAL){
+              allCoplanar=false;
+              break outer;
+            }
+          }
+        }
+
+        if(allCoplanar)seams.add(k);
+      });
+
+      return seams;
+    }
+
+    const coplanarCutSeams=buildCoplanarCutSeamSet();
+    const raw=[];
+
+    function testEdge(axis,a,b){
+      const mid=[
+        (a[0]+b[0])/2,
+        (a[1]+b[1])/2,
+        (a[2]+b[2])/2
+      ];
+
+      const pAxes=axis===0?[1,2]:axis===1?[0,2]:[0,1];
+      const signs=[[-1,-1],[1,-1],[1,1],[-1,1]];
+      const q=signs.map(([s0,s1])=>{
+        const p=[mid[0],mid[1],mid[2]];
+        p[pAxes[0]]+=s0*EPS_SAMPLE;
+        p[pAxes[1]]+=s1*EPS_SAMPLE;
+        return pointInsideSolidLocal(p);
+      });
+
+      if(isFeaturePattern(q)){
+        /*
+          v21: če je isti mrežni rob samo notranji seam dveh koplanarnih
+          poševnih CUT ploskev, geometrijsko NE obstaja kot tehniški rob.
+          Vidnost zato sploh ne sme dobiti priložnosti, da ga nariše črtkano.
+        */
+        if(coplanarCutSeams.has(localEdgeKey(a,b)))return;
+
+        raw.push({
+          a:transformBuilderPoint(a),
+          b:transformBuilderPoint(b)
+        });
+      }
+    }
+
+    // X usmerjeni unit robovi.
+    for(let x=0;x<n;x++){
+      for(let y=0;y<=n;y++){
+        for(let z=0;z<=n;z++){
+          testEdge(0,[x,y,z],[x+1,y,z]);
+        }
+      }
+    }
+
+    // Y usmerjeni unit robovi.
+    for(let y=0;y<n;y++){
+      for(let x=0;x<=n;x++){
+        for(let z=0;z<=n;z++){
+          testEdge(1,[x,y,z],[x,y+1,z]);
+        }
+      }
+    }
+
+    // Z usmerjeni unit robovi.
+    for(let z=0;z<n;z++){
+      for(let x=0;x<=n;x++){
+        for(let y=0;y<=n;y++){
+          testEdge(2,[x,y,z],[x,y,z+1]);
+        }
+      }
+    }
+
+    /*
+      Kolinearne unit segmente združimo samo, če se stikajo/prekrivajo.
+      To da eni skriti meji odprtine en neprekinjen črtkani vzorec namesto
+      ponovnega zagona dash vzorca na vsakem mrežnem polju.
+    */
+    const groups=new Map();
+
+    function keyNumber(v){
+      const r=Number(v.toFixed(7));
+      return Math.abs(r)<EPS_LINE?0:r;
+    }
+
+    raw.forEach(edge=>{
+      const d=vSub(edge.b,edge.a);
+      const len=Math.hypot(d[0],d[1],d[2]);
+      if(len<1e-8)return;
+
+      let u=[d[0]/len,d[1]/len,d[2]/len];
+
+      for(let i=0;i<3;i++){
+        if(Math.abs(u[i])<=EPS_LINE)continue;
+        if(u[i]<0)u=u.map(v=>-v);
+        break;
+      }
+
+      const ta=dot(edge.a,u);
+      const tb=dot(edge.b,u);
+      const base=[
+        edge.a[0]-u[0]*ta,
+        edge.a[1]-u[1]*ta,
+        edge.a[2]-u[2]*ta
+      ];
+
+      const k=[
+        keyNumber(u[0]),keyNumber(u[1]),keyNumber(u[2]),
+        keyNumber(base[0]),keyNumber(base[1]),keyNumber(base[2])
+      ].join(",");
+
+      if(!groups.has(k))groups.set(k,{u,base,intervals:[]});
+      groups.get(k).intervals.push([Math.min(ta,tb),Math.max(ta,tb)]);
+    });
+
+    const out=[];
+
+    function cleanPoint(p){
+      return p.map(v=>{
+        const r=Math.round(v);
+        return Math.abs(v-r)<1e-7?r:v;
+      });
+    }
+
+    groups.forEach(g=>{
+      g.intervals.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+
+      let cur=null;
+
+      function emit(iv){
+        if(!iv || iv[1]-iv[0]<1e-8)return;
+        out.push({
+          a:cleanPoint([
+            g.base[0]+g.u[0]*iv[0],
+            g.base[1]+g.u[1]*iv[0],
+            g.base[2]+g.u[2]*iv[0]
+          ]),
+          b:cleanPoint([
+            g.base[0]+g.u[0]*iv[1],
+            g.base[1]+g.u[1]*iv[1],
+            g.base[2]+g.u[2]*iv[1]
+          ])
+        });
+      }
+
+      g.intervals.forEach(iv=>{
+        if(!cur){
+          cur=[iv[0],iv[1]];
+          return;
+        }
+
+        if(iv[0]<=cur[1]+EPS_LINE){
+          cur[1]=Math.max(cur[1],iv[1]);
+        }else{
+          emit(cur);
+          cur=[iv[0],iv[1]];
+        }
+      });
+
+      emit(cur);
+    });
+
+    builderProjectionCache.set(cacheKey,out);
+    return out;
+  }
+
+  function builderOrientedProjectionGeometry(view){
+    const cacheKey=`orientedProjection|${builderState.projectionRevision}|${view}`;
+    if(builderProjectionCache.has(cacheKey))return builderProjectionCache.get(cacheKey);
+
+    const polygons=builderOrientedFillPolygons(view);
+    const outerEdges=builderOrientedBoundaryEdges(view);
+    const visibleEdges=[];
+    const hiddenEdges=[];
+
+    const hasCuts=[...builderState.cells.values()].some(c=>c.kind==="cut");
+
+    /*
+      Vidni tehniški robovi ostanejo iz obstoječega 3D feature engine-a.
+      Za model brez rezov lahko isti engine še vedno varno poda tudi skrite
+      robove – to ohrani preverjeno hitro pot v18/v19.
+    */
+    builderFeatureEdges3DOriented().forEach(edge=>{
+      const split=splitBuilderFeatureEdgeByVisibility(view,edge);
+      visibleEdges.push(...split.visible);
+      if(!hasCuts)hiddenEdges.push(...split.hidden);
+    });
+
+    /*
+      v20 – mešani FULL + CUT modeli
+      --------------------------------
+      Pri CUT modelu NE smemo več globalno zavreči skritih FULL robov.
+      Najprej vzamemo mrežno poravnane prave feature robove celotnega telesa.
+      Ti vrnejo tudi konkavne robove skritih odprtin/podvisov:
+        - luknja pod sedežem klopi,
+        - noge stola pod sedežem,
+        - stebri mostu pod zgornjo ploščo,
+        - notranje meje kavča pod višjimi deli.
+
+      Nato dodamo še poševne CUT feature robove iz v19. Ta del še vedno
+      odstrani koplanarne seame med sosednjimi rezanimi gradniki.
+    */
+    if(hasCuts){
+      builderAxisFeatureEdges3DOriented().forEach(edge=>{
+        const split=splitBuilderFeatureEdgeByVisibility(view,edge);
+        hiddenEdges.push(...split.hidden);
+      });
+
+      builderCutFaceBoundaryEdges3DOriented().forEach(edge=>{
+        const split=splitBuilderFeatureEdgeByVisibility(view,edge);
+        hiddenEdges.push(...split.hidden);
+      });
+    }
+
+    const result={
+      polygons,
+      outerEdges,
+      visibleEdges:dedupeBuilderProjectionSegments(visibleEdges),
+      hiddenEdges:dedupeBuilderProjectionSegments(hiddenEdges)
+    };
+    builderProjectionCache.set(cacheKey,result);
+    return result;
+  }
+
   function resizeProjectionCanvas(){
     const r=projectionCanvas.getBoundingClientRect();
     const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -5113,14 +7575,51 @@
       side:{label:"STRANSKI RIS",side:"right",vertical:"up"}
     };
 
+    /*
+      DISPLAY ORIENTATION ONLY
+      ------------------------
+      Geometrija projekcije ostane v svojih naravnih koordinatah:
+        front = (x,z)
+        top   = (x,y)
+        side  = (y,z)
+
+      Tik pred risanjem jo samo orientiramo tako, kot zahteva isti koordinatni
+      sistem, ki ga učenec vidi v 3D:
+        - naris:  +x gre levo
+        - tloris: +x gre levo in +y gre navzdol
+        - stranski ris: +y gre desno (brez spremembe)
+
+      Ne posegamo v shranjene koordinate ali calculation engine.
+    */
+    function orientProjectionPoint(view,p){
+      const [a,b]=p;
+      if(view==="front")return [-a,b];
+      if(view==="top")return [-a,-b];
+      return [a,b];
+    }
+
+    function orientProjectionSegments(view,segments){
+      return segments.map(([a,b])=>[
+        orientProjectionPoint(view,a),
+        orientProjectionPoint(view,b)
+      ]);
+    }
+
     function drawView(view){
       const cfg=configs[view];
-      const polys=projectionPolygons(view);
-      const outerEdges=projectionBoundaryEdges(view);
-      const visibleInnerEdges=computeBuilderVisibleInnerEdges(view);
-      const hiddenEdges=computeBuilderHiddenEdges(view);
 
-      // Calculate bounds in unit coordinates. Empty model still gets labels.
+      // Enoten geometrijski engine za vseh 12 rezov in vse 90° orientacije.
+      // Tako 3D, naris, tloris in stranski ris vedno izhajajo iz iste geometrije.
+      const geometry=builderOrientedProjectionGeometry(view);
+
+      const polys=geometry.polygons
+        .map(poly=>poly.map(p=>orientProjectionPoint(view,p)));
+
+      const outerEdges=orientProjectionSegments(view,geometry.outerEdges);
+      const visibleInnerEdges=orientProjectionSegments(view,geometry.visibleEdges);
+      const hiddenEdges=orientProjectionSegments(view,geometry.hiddenEdges);
+
+      // Calculate bounds in DISPLAY coordinates. Empty model still gets labels.
       const all=polys.flat();
       const minA=all.length?Math.min(...all.map(p=>p[0])):0;
       const maxA=all.length?Math.max(...all.map(p=>p[0])):1;
@@ -5160,23 +7659,22 @@
         pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
       });
 
-      // ZUNANJI tehniški obris - najmočnejša črta.
-      // Rišemo ga čez fill, sheet grid IN hidden lines.
+      // NOTRANJI vidni tehniški robovi.
+      pctx.strokeStyle=PROJECTION_STYLE.visibleEdge.color;
+      pctx.lineWidth=PROJECTION_STYLE.visibleEdge.width;
+      pctx.setLineDash(PROJECTION_STYLE.visibleEdge.dash);
+      visibleInnerEdges.forEach(([a,b])=>{
+        const A=mapPt(a),B=mapPt(b);
+        pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
+      });
+
+      // ZUNANJI tehniški obris rišemo ZADNJI. Generic feature-edge engine
+      // lahko vsebuje tudi dele silhuete; močnejši outerEdge mora zato zmagati.
       pctx.strokeStyle=PROJECTION_STYLE.outerEdge.color;
       pctx.lineWidth=PROJECTION_STYLE.outerEdge.width;
       pctx.setLineDash(PROJECTION_STYLE.outerEdge.dash);
       pctx.lineCap="square";
       outerEdges.forEach(([a,b])=>{
-        const A=mapPt(a),B=mapPt(b);
-        pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
-      });
-
-      // NOTRANJI vidni tehniški robovi - malo tanjši od silhuete, ampak
-      // še vedno bistveno temnejši / debelejši od didaktične mreže.
-      pctx.strokeStyle=PROJECTION_STYLE.visibleEdge.color;
-      pctx.lineWidth=PROJECTION_STYLE.visibleEdge.width;
-      pctx.setLineDash(PROJECTION_STYLE.visibleEdge.dash);
-      visibleInnerEdges.forEach(([a,b])=>{
         const A=mapPt(a),B=mapPt(b);
         pctx.beginPath();pctx.moveTo(A[0],A[1]);pctx.lineTo(B[0],B[1]);pctx.stroke();
       });
@@ -5206,32 +7704,126 @@
   }
 
   /*
-    SWITCH BUILDER VIEW
-    -------------------
-    3D sestavljanje <-> pravokotna projekcija.
-    Ne odpiramo nove strani, ker teacher flow mora ostati instant.
+    ENOTNI 3D + PROJEKCIJSKI DELOVNI POGLED
+    ----------------------------------------
+    Ni več "glavnega" in "pomožnega" pogleda. Oba prikaza uporabljata isto
+    builderState geometrijo in sta lahko hkrati vidna.
+
+    layout:
+      projection = projekcije ostanejo polne velikosti, 3D uporabi prazen
+                   spodnji desni kvadrant;
+      equal      = oba prikaza sta drug ob drugem;
+      3d         = 3D dobi več prostora, projekcije ostanejo vidne ob strani.
   */
-  function setBuilderView(mode){
-    builderState.view=mode==="projection"?"projection":"3d";
-    const projectionMode=builderState.view==="projection";
-    builderStage.classList.toggle("projection-mode",projectionMode);
-    builder3DBtn.classList.toggle("active",!projectionMode);
-    builderProjectionBtn.classList.toggle("active",projectionMode);
+  function syncBuilderWorkspaceUI(){
+    const show3D=!!builderState.show3D;
+    const showProjection=!!builderState.showProjection;
+    const layout=["projection","equal","3d"].includes(builderState.layout)
+      ? builderState.layout
+      : "projection";
+    builderState.layout=layout;
 
-    builderStageTitle.textContent=projectionMode?"Pravokotna projekcija":"3D model";
-    builderStageHint.textContent=projectionMode
-      ?"Naris, tloris in stranski ris so postavljeni eno glavno mrežno polje od referenčnih osi."
-      :"Sestavljaj po plasteh. 3D model lahko obračaš z vlečenjem.";
+    builderStage.classList.toggle("show-3d",show3D);
+    builderStage.classList.toggle("show-projection",showProjection);
+    builderStage.classList.toggle("layout-projection",layout==="projection");
+    builderStage.classList.toggle("layout-equal",layout==="equal");
+    builderStage.classList.toggle("layout-3d",layout==="3d");
 
-    if(projectionMode)renderBuilderProjection();
+    builderToggle3DBtn.classList.toggle("active",show3D);
+    builderToggle3DBtn.setAttribute("aria-pressed",show3D?"true":"false");
+    builderToggle3DBtn.textContent=show3D?"3D: VKLOP":"3D: IZKLOP";
+
+    builderToggleProjectionBtn.classList.toggle("active",showProjection);
+    builderToggleProjectionBtn.setAttribute("aria-pressed",showProjection?"true":"false");
+    builderToggleProjectionBtn.textContent=showProjection
+      ?"Projekcije: VKLOP"
+      :"Projekcije: IZKLOP";
+
+    builderLayoutProjectionBtn.classList.toggle("active",layout==="projection");
+    builderLayoutEqualBtn.classList.toggle("active",layout==="equal");
+    builderLayout3DBtn.classList.toggle("active",layout==="3d");
+
+    const canArrange=show3D && showProjection;
+    [builderLayoutProjectionBtn,builderLayoutEqualBtn,builderLayout3DBtn]
+      .forEach(btn=>btn.disabled=!canArrange);
+
+    if(show3D && showProjection){
+      builderStageTitle.textContent="Skupni pogled";
+      builderStageHint.textContent=layout==="projection"
+        ?"Projekcije ostanejo velike; 3D uporablja prazen spodnji desni kvadrant."
+        : layout==="equal"
+          ?"3D in pravokotna projekcija imata približno enako prostora."
+          :"3D je povečan; pravokotne projekcije ostajajo ves čas vidne.";
+    }else if(show3D){
+      builderStageTitle.textContent="3D model";
+      builderStageHint.textContent="Pravokotne projekcije so skrite. 3D uporablja celotno delovno polje.";
+    }else{
+      builderStageTitle.textContent="Pravokotna projekcija";
+      builderStageHint.textContent="3D model je skrit. Naris, tloris in stranski ris uporabljajo celotno delovno polje.";
+    }
+  }
+
+  function setBuilderViewVisibility(which,enabled){
+    enabled=!!enabled;
+
+    if(which==="3d"){
+      if(!enabled && !builderState.showProjection){
+        updateBuilderStatus("Vsaj en prikaz mora ostati vključen.");
+        return;
+      }
+      builderState.show3D=enabled;
+    }else if(which==="projection"){
+      if(!enabled && !builderState.show3D){
+        updateBuilderStatus("Vsaj en prikaz mora ostati vključen.");
+        return;
+      }
+      builderState.showProjection=enabled;
+    }
+
+    syncBuilderWorkspaceUI();
+
+    requestAnimationFrame(()=>{
+      if(builderState.showProjection)renderBuilderProjection();
+      if(builderState.show3D)renderBuilder3D();
+    });
+  }
+
+  function setBuilderLayout(layout){
+    if(!["projection","equal","3d"].includes(layout))return;
+
+    // Če je trenutno viden samo en pogled, izbiro vseeno shranimo. Uporabi se
+    // takoj, ko uporabnik ponovno vključi drugi pogled.
+    builderState.layout=layout;
+    syncBuilderWorkspaceUI();
+
+    requestAnimationFrame(()=>{
+      if(builderState.showProjection)renderBuilderProjection();
+      if(builderState.show3D)renderBuilder3D();
+    });
+  }
+
+  function emphasizeBuilderProjection(){
+    if(!builderState.showProjection)builderState.showProjection=true;
+    if(!builderState.show3D)builderState.show3D=true;
+    builderState.layout="projection";
+    syncBuilderWorkspaceUI();
+    requestAnimationFrame(()=>{
+      renderBuilderProjection();
+      renderBuilder3D();
+    });
   }
 
   function openBuilder(){
     builderOverlay.classList.add("open");
     builderOverlay.setAttribute("aria-hidden","false");
-    setBuilderView("3d");
+    syncBuilderWorkspaceUI();
     renderLayerGrid();
     updateBuilderStatus();
+
+    requestAnimationFrame(()=>{
+      if(builderState.showProjection)renderBuilderProjection();
+      if(builderState.show3D)renderBuilder3D();
+    });
   }
 
   function closeBuilder(){
@@ -5241,18 +7833,19 @@
   }
 
   function resetBuilderView(){
-    builderState.targetYaw=-0.70;
+    builderState.targetYaw=2.35619449;
     builderState.targetPitch=0.52;
     builderState.zoom=1;
   }
 
   function builderRenderLoop(){
-    if(builderOverlay.classList.contains("open") && builderState.view==="3d"){
+    if(builderOverlay.classList.contains("open")){
       builderState.yaw=ease(builderState.yaw,builderState.targetYaw,.11);
       builderState.pitch=ease(builderState.pitch,builderState.targetPitch,.11);
-      renderBuilder3D();
-    }else if(builderOverlay.classList.contains("open") && builderState.view==="projection"){
-      renderBuilderProjection();
+
+      // Oba vključena prikaza sta živa in bereta isto geometrijsko stanje.
+      if(builderState.show3D)renderBuilder3D();
+      if(builderState.showProjection)renderBuilderProjection();
     }
     requestAnimationFrame(builderRenderLoop);
   }
@@ -5271,17 +7864,37 @@
 
   openBuilderBtn.addEventListener("click",openBuilder);
   builderCloseBtn.addEventListener("click",closeBuilder);
-  builder3DBtn.addEventListener("click",()=>setBuilderView("3d"));
-  builderProjectionBtn.addEventListener("click",()=>setBuilderView("projection"));
-  builderShowProjectionBtn.addEventListener("click",()=>setBuilderView("projection"));
+
+  builderToggle3DBtn.addEventListener("click",()=>{
+    setBuilderViewVisibility("3d",!builderState.show3D);
+  });
+  builderToggleProjectionBtn.addEventListener("click",()=>{
+    setBuilderViewVisibility("projection",!builderState.showProjection);
+  });
+
+  builderLayoutProjectionBtn.addEventListener("click",()=>setBuilderLayout("projection"));
+  builderLayoutEqualBtn.addEventListener("click",()=>setBuilderLayout("equal"));
+  builderLayout3DBtn.addEventListener("click",()=>setBuilderLayout("3d"));
+
+  builderShowProjectionBtn.addEventListener("click",emphasizeBuilderProjection);
   builderUndoBtn.addEventListener("click",builderUndo);
   builderClearBtn.addEventListener("click",clearBuilder);
   builderExampleBtn.addEventListener("click",loadBuilderExample);
   builderResetViewBtn.addEventListener("click",resetBuilderView);
 
+  // Rigid 90° turns of the complete body. These are NOT camera rotations.
+  // A turn never changes visibility/layout. Both visible views update in place,
+  // while the rigid body is snapped to the voxel grid and parked at 0,0,0.
+  builderRotateLeftBtn.addEventListener("click",()=>rotateBuilderObject("left"));
+  builderRotateRightBtn.addEventListener("click",()=>rotateBuilderObject("right"));
+  builderRotateUpBtn.addEventListener("click",()=>rotateBuilderObject("up"));
+  builderRotateDownBtn.addEventListener("click",()=>rotateBuilderObject("down"));
+  builderRotationResetBtn.addEventListener("click",()=>resetBuilderObjectRotation());
+
   // Save/load model files. Teacher or student can carry these on USB,
   // upload them to classroom systems, and open the exact same model later.
   builderStudentName.addEventListener("input",syncBuilderAuthorInfo);
+  builderSendTeacherBtn.addEventListener("click",sendTehnikaModelToTeacher);
   builderSaveBtn.addEventListener("click",saveTehnikaModel);
   builderStlBtn.addEventListener("click",exportBuilderStl);
   builderPrintSafeStlBtn.addEventListener("click",exportBuilderPrintSafeStl);
@@ -5305,6 +7918,7 @@
   });
 
   builderToolButtons.forEach(btn=>btn.addEventListener("click",()=>setBuilderTool(btn.dataset.tool)));
+  cutFamilyButtons.forEach(btn=>btn.addEventListener("click",()=>setBuilderCutFamily(btn.dataset.cutFamily)));
   cutDirButtons.forEach(btn=>btn.addEventListener("click",()=>setBuilderCutDir(btn.dataset.cut)));
 
   /*
@@ -5342,6 +7956,9 @@
   renderLayerGrid();
   updateBuilderStatus();
   syncBuilderAuthorInfo();
+  syncBuilderWorkspaceUI();
+  teacherSubmitClientId();
+  startTeacherSubmitCountdown();
   requestAnimationFrame(builderRenderLoop);
 
   // ---------- Q&A events -------------------------------------------------
