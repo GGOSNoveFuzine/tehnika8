@@ -85,6 +85,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .data td:first-child{width:40%;font:700 10px Consolas,monospace;text-transform:uppercase;color:#5a6871;letter-spacing:.05em}
 .preview{width:100%;height:350px;display:block;background:#f9faf9;border:1px solid #b3bdc3}
 .practice-preview-dims{font:900 16px/1 Consolas,"Courier New",monospace;fill:#173f56;letter-spacing:.02em;paint-order:stroke;stroke:#f9faf9;stroke-width:4px;stroke-linejoin:round}
+.learn-preview-title{font:900 14px/1 Consolas,"Courier New",monospace;fill:#263943;letter-spacing:.02em}
+.learn-preview-dims{font:900 15px/1 Consolas,"Courier New",monospace;fill:#173f56;letter-spacing:.01em;paint-order:stroke;stroke:#f9faf9;stroke-width:4px;stroke-linejoin:round}
+.learn-preview-meta{font:700 9px/1 Consolas,"Courier New",monospace;fill:#526874}
 .feedback{min-height:50px;border:1px dashed #86969f;background:#fafbfb;padding:8px;font-size:13px;line-height:1.42}
 .feedback.ok{border-color:#67816c;background:#edf3ee}
 .feedback.bad{border-color:#9a625d;background:#f6eceb}
@@ -1052,6 +1055,7 @@ button:disabled{
     <div class="view-actions" id="learnActions" hidden>
       <button id="lessonReplay">Ponovi trenutni korak</button>
       <button id="lessonReset">Začni od začetka</button>
+      <button id="lessonGridToggle" type="button" aria-pressed="false">Mreža: IZKLOP</button>
     </div>
     <div class="practice-line-toolbar" id="practiceLineToolbar" hidden aria-label="Vrsta črte">
       <span class="tool-label">VRSTA ČRTE</span>
@@ -1451,6 +1455,7 @@ const state={
   axisMap:{x:null,y:null,z:null},
   lessonId:"cuboid",
   lessonStep:0,
+  lessonGrid:false,
   flashStep:false,
   practiceId:"stairs",
   practiceSelected:null,
@@ -2358,9 +2363,10 @@ function drawPreview(){
   const shape=lessonShapes.get(lesson.id);
   const fit=fitShape(shape,{x1:12,y1:18,x2:348,y2:254},.99);
   drawShape(previewSvg,shape,fit.origin,fit.scale,{faces:true,hidden:false});
-  text2(previewSvg,18,276,lesson.title.replace(/^\d+\s·\s/,""),"tech-label","start");
-  text2(previewSvg,18,296,dimsText(shape),"tech-small","start");
-  text2(previewSvg,342,296,`${lesson.model.gridSize[0]}×${lesson.model.gridSize[1]}×${lesson.model.gridSize[2]} · ${lesson.model.cellSizeMm} mm/celico`,"tech-small","end");
+  const d=shape.mmSpan.map(mmText);
+  text2(previewSvg,18,274,lesson.title.replace(/^\d+\s·\s/,""),"learn-preview-title","start");
+  text2(previewSvg,342,274,`${lesson.model.gridSize[0]}×${lesson.model.gridSize[1]}×${lesson.model.gridSize[2]} · ${lesson.model.cellSizeMm} mm/celico`,"learn-preview-meta","end");
+  text2(previewSvg,180,299,`D x Š x V = ${d[0]} x ${d[1]} x ${d[2]}`,"learn-preview-dims");
 }
 
 /* -------------------------------------------------------------------------
@@ -2561,7 +2567,8 @@ function renderCuboidLesson(){
   clear(mainSvg);
   const shape=lessonShapes.get("cuboid"),g=cuboidGeom(shape),s=state.lessonStep;
   const origin=[500,440],scale=62;
-  drawIsoGrid(mainSvg,origin,scale,5);
+  if(state.lessonGrid)drawIsometricPaperGrid(mainSvg,origin,scale);
+  else drawIsoGrid(mainSvg,origin,scale,5);
 
   if(s<=21)drawLessonAxes(origin,scale,g,s);
 
@@ -3030,6 +3037,7 @@ function drawCircleConstruction(svg,step,{origin=[500,250],scale=60,preview=fals
     // Pri končni sliki ostane samo elipsa.
     if(finalOnly&&!preview){
       clear(svg);
+      if(state.module==="learn"&&state.lessonGrid)drawIsometricPaperGrid(svg,origin,scale);
       drawCircularArcByTarget(svg,g.T1,g.B,g.C,Math.PI/2,"visible-edge");
       drawCircularArcByTarget(svg,g.T2,g.A,g.D,-Math.PI/2,"visible-edge");
       drawCircularArcByTarget(svg,g.T3,g.A,g.B,Math.PI,"visible-edge");
@@ -3041,6 +3049,7 @@ function drawCircleConstruction(svg,step,{origin=[500,250],scale=60,preview=fals
 function renderCircleLesson(){
   clear(mainSvg);
   const s=clamp(state.lessonStep,0,circleSteps.length-1);
+  if(state.lessonGrid)drawIsometricPaperGrid(mainSvg,[500,250],60);
   drawCircleConstruction(mainSvg,s);
   const d=circleSteps[s];
   stepNo.textContent=`NAUČI SE · KROG / ELIPSA · KORAK ${s+1} / ${circleSteps.length}`;
@@ -3071,7 +3080,8 @@ function renderScriptedLesson(id){
   clear(mainSvg);
   const lesson=lessons.find(l=>l.id===id),shape=lessonShapes.get(id),plan=scriptedLessonPlans[id],s=state.lessonStep;
   const {origin,scale}=guidedFrame(shape);
-  drawIsoGrid(mainSvg,origin,scale,6);
+  if(state.lessonGrid)drawIsometricPaperGrid(mainSvg,origin,scale);
+  else drawIsoGrid(mainSvg,origin,scale,6);
 
   if(s<plan.cleanStep)drawGuidedAxes(shape,origin,scale,s===0);
 
@@ -3171,6 +3181,12 @@ function syncLearnPanel(){
   document.getElementById("lessonRail").hidden=false;
   document.getElementById("lessonStepsList").style.display="block";
   document.querySelector(".lesson-rail-note").textContent="Klikni korak ali uporabi gumba Naprej / Nazaj.";
+  const gridBtn=document.getElementById("lessonGridToggle");
+  if(gridBtn){
+    gridBtn.classList.toggle("active",state.lessonGrid);
+    gridBtn.setAttribute("aria-pressed",state.lessonGrid?"true":"false");
+    gridBtn.textContent=state.lessonGrid?"Mreža: VKLOP":"Mreža: IZKLOP";
+  }
 }
 
 
@@ -6381,6 +6397,13 @@ function lessonStepBy(d){
 document.getElementById("lessonPrev").addEventListener("click",()=>lessonStepBy(-1));
 document.getElementById("lessonNext").addEventListener("click",()=>lessonStepBy(1));
 ["lessonReset","lessonBottomReset"].forEach(id=>document.getElementById(id).addEventListener("click",()=>{state.lessonStep=0;renderLearn()}));
+document.getElementById("lessonGridToggle").addEventListener("click",()=>{
+  state.lessonGrid=!state.lessonGrid;
+  renderLearn();
+  setFeedback(state.lessonGrid
+    ?"Izometrična mreža je vključena. Uporabi jo kot pomoč pri prenašanju mer po oseh x, y in z."
+    :"Izometrična mreža je izključena.","ok");
+});
 document.getElementById("lessonReplay").addEventListener("click",()=>{
   const old=state.lessonStep;
   state.lessonStep=Math.max(0,old-1);renderLearn();
