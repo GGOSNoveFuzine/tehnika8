@@ -432,8 +432,7 @@
     .live-section{padding:18px 0 86px}
 
     /* 
-      Trenutno imamo samo en live modul, zato ga ne tlačimo v fake grid šestih "appov".
-      One real thing gets proper space. Ko repo zraste, lahko ta section kasneje razbijemo.
+      Glavni live modul dobi največ prostora; dodatni dokončani moduli so lahko aktivni tudi v karticah spodaj.
     */
     .featured{
       position:relative;
@@ -569,6 +568,8 @@
 
     .road-card{
       position:relative;
+      color:inherit;
+      text-decoration:none;
       min-height:280px;
       overflow:hidden;
       padding:25px;
@@ -833,8 +834,8 @@
             <h2 id="live-heading">Od 3D predmeta do risbe.</h2>
           </div>
           <p>
-            Zaenkrat je live en modul. Raje en, ki dejansko nekaj dela,
-            kot šest kartic, ki samo zgledajo busy.
+            Trenutno sta na voljo dva interaktivna modula: pravokotna in izometrična projekcija.
+            Oba sta namenjena dejanskemu delu učencev.
           </p>
         </div>
 
@@ -939,15 +940,14 @@
             <h2 id="roadmap-heading">Naslednji kosi sestavljanke.</h2>
           </div>
           <p>
-            Te kartice so samo smer, kam lahko stran zraste.
-            Ko bo aplikacija res obstajala, dobi klik. Do takrat lepo miruje.
+            Izometrična projekcija je zdaj na voljo. Ostale kartice kažejo smer, kam bo stran rasla naprej.
           </p>
         </div>
 
         <div class="roadmap-grid">
-          <article class="road-card">
+          <a class="road-card" href="izometricna_projekcija.html" aria-label="Odpri modul Izometrična projekcija">
             <span class="road-no">02</span>
-            <span class="road-status">v pripravi</span>
+            <span class="road-status">live</span>
             <div class="road-visual" aria-hidden="true">
               <svg viewBox="0 0 420 280">
                 <g transform="translate(220 78)" fill="none" stroke="currentColor" stroke-width="3">
@@ -963,8 +963,8 @@
               </svg>
             </div>
             <h3>Izometrična projekcija</h3>
-            <p>3D predmet na ravnini, osi 30° in prostorska predstava.</p>
-          </article>
+            <p>Od osi do samostojnega risanja: učenje, vaje, sestavljanje teles in prostorska predstava.</p>
+          </a>
 
           <article class="road-card">
             <span class="road-no">03</span>
