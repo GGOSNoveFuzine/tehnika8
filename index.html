@@ -8,7 +8,7 @@
   <meta name="description" content="Interaktivna Tehnika in tehnologija za 8. razred: tehniško risanje, 3D modeli, konstrukcije, materiali, stroji in tehnologija." />
   <meta name="robots" content="index,follow" />
   <meta name="theme-color" content="#e8ecec" />
-    <!--REKLAMA, NE MI ČEKIRAT KODE !!!!!!!:) -->
+    
      
     
   <style>
@@ -43,10 +43,7 @@
         linear-gradient(180deg,#eef1f0 0%,var(--paper) 54%,#dfe5e5 100%);
     }
 
-    /* 
-      Tehniška mreža je samo visual clue, ni merilo v mm.
-      Če grid opaziš prej kot content, smo ga naredili premočnega. Simple as that.
-    */
+    
     body::before{
       content:"";
       position:fixed;
@@ -116,7 +113,7 @@
       box-shadow:inset 0 0 0 4px rgba(47,97,116,.05);
     }
 
-    /* tiny center marks, ker navaden kvadrat je pač malo boring */
+    
     .brand-mark::before,.brand-mark::after{
       content:"";
       position:absolute;
@@ -236,10 +233,7 @@
       font-weight:700;
     }
 
-    /* 
-      Hero stage: big engineering 8 ostane mirna referenca.
-      Particle objekti pa se morphajo čez njo. Malo wow, ampak ne circus mode.
-    */
+    
     .hero-art{
       min-height:540px;
       position:relative;
@@ -278,11 +272,13 @@
       z-index:2;
     }
 
+    .hero-controls{
+      position:absolute;left:34px;right:34px;bottom:31px;z-index:4;
+      display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+    }
+
     .shape-caption{
-      position:absolute;
-      left:34px;
-      bottom:31px;
-      z-index:4;
+      max-width:100%;
       display:flex;
       align-items:center;
       gap:10px;
@@ -305,10 +301,6 @@
     }
 
     .motion-toggle{
-      position:absolute;
-      right:34px;
-      bottom:31px;
-      z-index:4;
       border:1px solid rgba(32,52,61,.2);
       color:var(--ink);
       background:rgba(247,248,246,.78);
@@ -319,10 +311,7 @@
       backdrop-filter:blur(6px);
     }
 
-    /* 
-      Kotiranje v heroju je intentionally "design language", ne uradna delavniška risba.
-      Fora je, da na prvi pogled zadiši po tehniki, ne da učenca tukaj že ocenjujemo :)
-    */
+    
     .dim{
       position:absolute;
       z-index:3;
@@ -431,9 +420,7 @@
 
     .live-section{padding:18px 0 86px}
 
-    /* 
-      Glavni live modul dobi največ prostora; dodatni dokončani moduli so lahko aktivni tudi v karticah spodaj.
-    */
+    
     .featured{
       position:relative;
       min-height:410px;
@@ -692,8 +679,7 @@
     @media(max-width:520px){
       .site{width:min(100% - 20px,520px)}
       .hero-art{min-height:350px}
-      .shape-caption{left:18px;bottom:18px}
-      .motion-toggle{right:18px;bottom:18px}
+      .hero-controls{left:18px;right:18px;bottom:18px}
       .section-heading{display:block}
       .section-heading p{margin-top:12px}
       .featured-copy{padding:31px 22px 25px}
@@ -748,15 +734,12 @@
           <div class="hero-actions">
             <a class="btn primary" href="#trenutno">Poglej, kaj že dela →</a>
             <a class="btn" href="#naprej">Kaj pride naslednje</a>
-            <span class="hero-note">GitHub-friendly · brez external assetov</span>
+            <span class="hero-note">Raziskuj, riši in ustvarjaj.</span>
           </div>
         </div>
 
         <div class="hero-art" id="heroArt" aria-label="Animiran tehniški prikaz predmetov iz delcev">
-          <!--
-            Velika 8 je narisana kot nek engineering part.
-            Ne rabimo perfektnega ISO standarda v heroju; rabimo vibe, da si takoj v svetu tehnike.
-          -->
+          
           <svg class="eight-drawing" viewBox="0 0 760 540" aria-hidden="true">
             <defs>
               <linearGradient id="eightFill" x1="0" y1="0" x2="1" y2="1">
@@ -796,14 +779,14 @@
               />
             </g>
 
-            <!-- centerlines, ker dve izvrtini brez centerline sta suspicious :) -->
+            
             <g stroke="#52707a" stroke-width="1.2" opacity=".42" stroke-dasharray="9 7">
               <line x1="480" y1="62" x2="480" y2="512"/>
               <line x1="382" y1="160" x2="578" y2="160"/>
               <line x1="364" y1="380" x2="596" y2="380"/>
             </g>
 
-            <!-- malo construction geometry v ozadju -->
+            
             <g fill="none" stroke="#52707a" stroke-width="1" opacity=".23">
               <circle cx="480" cy="160" r="77"/>
               <circle cx="480" cy="380" r="102"/>
@@ -818,7 +801,8 @@
           <div class="dim dim-v" aria-hidden="true"><span id="dimV">H = 54</span></div>
           <div class="center-mark" aria-hidden="true"></div>
 
-          <div class="shape-caption" aria-live="polite">
+          <div class="hero-controls">
+          <div class="shape-caption">
             <i aria-hidden="true"></i>
             <span id="shapeName">most · konstrukcija</span>
           </div>
@@ -826,6 +810,7 @@
           <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false">
             Ustavi gibanje
           </button>
+          </div>
         </div>
       </section>
 
@@ -833,17 +818,17 @@
         <div class="section-heading">
           <div>
             <div class="section-kicker">trenutno na voljo</div>
-            <h2 id="live-heading">Od 3D predmeta do risbe.</h2>
+            <h2 id="live-heading">Od predmeta do risbe.<br>Od skice do modela.</h2>
           </div>
           <p>
-            Trenutno sta na voljo dva interaktivna modula: pravokotna in izometrična projekcija.
-            Oba sta namenjena dejanskemu delu učencev.
+            Izbiraj med pravokotno projekcijo, izometrično projekcijo in CADCraftom.
+            Raziskuj poglede, vadi risanje in oblikuj svoje 3D izdelke.
           </p>
         </div>
 
         <a class="featured" href="pravokotna_projekcija.html">
           <div class="featured-copy">
-            <span class="live-badge">live modul</span>
+            <span class="live-badge">Na voljo</span>
             <h3>Pravokotna projekcija</h3>
             <p>
               Predmet postavi v prostorski kot, primerjaj naris, tloris in stranski ris,
@@ -874,7 +859,7 @@
                 </linearGradient>
               </defs>
 
-              <!-- back/front plane -->
+              
               <g class="plane plane-front">
                 <polygon points="245,72 545,72 545,300 245,300" fill="url(#planeA)" stroke="rgba(255,255,255,.38)" stroke-width="2"/>
                 <g stroke="rgba(255,255,255,.12)" stroke-width="1">
@@ -890,7 +875,7 @@
                 </g>
               </g>
 
-              <!-- top plane -->
+              
               <g class="plane plane-top">
                 <polygon points="245,300 545,300 642,356 342,356" fill="url(#planeB)" stroke="rgba(255,255,255,.34)" stroke-width="2"/>
                 <line x1="295" y1="300" x2="392" y2="356" stroke="rgba(255,255,255,.11)"/>
@@ -900,12 +885,12 @@
                 <line x1="495" y1="300" x2="592" y2="356" stroke="rgba(255,255,255,.11)"/>
               </g>
 
-              <!-- side plane -->
+              
               <g class="plane plane-side">
                 <polygon points="545,72 642,128 642,356 545,300" fill="rgba(212,194,88,.13)" stroke="rgba(255,255,255,.34)" stroke-width="2"/>
               </g>
 
-              <!-- 3D stepped object -->
+              
               <g fill="#86a8b4" stroke="#eaf3f5" stroke-width="2">
                 <polygon points="330,222 430,222 468,244 368,244"/>
                 <polygon points="330,222 368,244 368,294 330,272"/>
@@ -915,7 +900,7 @@
                 <polygon points="368,194 418,194 418,244 368,244"/>
               </g>
 
-              <!-- projectors -->
+              
               <g class="ray" fill="none" stroke="rgba(237,247,249,.55)" stroke-width="1.5">
                 <line x1="330" y1="172" x2="330" y2="92"/>
                 <line x1="380" y1="172" x2="380" y2="92"/>
@@ -923,7 +908,7 @@
                 <line x1="368" y1="294" x2="405" y2="349"/>
               </g>
 
-              <!-- mini dimensions -->
+              
               <g stroke="#f1b17c" fill="#f1b17c" stroke-width="1.4" font-family="monospace" font-size="12">
                 <line x1="308" y1="320" x2="470" y2="320"/>
                 <line x1="308" y1="312" x2="308" y2="328"/>
@@ -936,7 +921,7 @@
 
         <a class="featured" href="izometricna_projekcija.html" aria-label="Odpri modul Izometrična projekcija">
           <div class="featured-copy">
-            <span class="live-badge">live modul</span>
+            <span class="live-badge">Na voljo</span>
             <h3>Izometrična projekcija</h3>
             <p>
               Od osi in 30° smeri do samostojnega risanja. Uči se po korakih,
@@ -991,23 +976,92 @@
             </svg>
           </div>
         </a>
+
+        <a class="featured cadcraft-card" href="cadcraft.html" aria-label="Odpri CADCraft">
+          <div class="featured-copy">
+            <span class="live-badge">Na voljo</span>
+            <h3>CADCraft</h3>
+            <p>Nariši skico, določi mere in oblikuj 3D predmet. Svoje izdelke
+              sestavljaj na otoku, shrani svoje delo in pripravi model za 3D tisk.</p>
+            <div class="feature-tags" aria-label="Vsebina CADCrafta">
+              <span>skiciranje</span><span>mere</span><span>3D modeliranje</span>
+              <span>sestavljanje</span><span>STL</span>
+            </div>
+            <span class="featured-cta">Odpri CADCraft →</span>
+          </div>
+          <div class="projection-visual" aria-hidden="true">
+            <svg viewBox="0 0 720 430" fill="none">
+              <defs>
+                <linearGradient id="cadGrass" x1="0" y1="0" x2="1" y2="1">
+                  <stop stop-color="#a8cfa7"/><stop offset="1" stop-color="#5a9983"/>
+                </linearGradient>
+              </defs>
+              <path d="M40 206 123 116 169 166 245 89 326 188 418 112 492 172 571 104 688 206Z" fill="#9abbb9" opacity=".12"/>
+              <path d="M211 128 245 89 279 131 255 120 242 131 231 121Z M546 135 571 104 603 142 579 130 568 137Z" fill="#dcece3" opacity=".2"/>
+              <ellipse cx="386" cy="334" rx="295" ry="69" fill="#77c6d2" opacity=".25"/>
+              <g stroke="#a2d4ce" stroke-opacity=".32" stroke-width="1.5">
+                <path d="M91 343q40 12 80 0 M518 374q45 11 93-2 M602 310l48 4 M193 384l65 4 M70 307l32 5"/>
+                <ellipse cx="386" cy="324" rx="248" ry="61" stroke-dasharray="4 9"/>
+              </g>
+              <path d="m163 263 96-56 160-15 149 41 51 61-69 49-185 24-154-44Z" fill="#bdad87"/>
+              <path d="m163 263 48 60 154 44 185-24 69-49-3 21-63 47-186 24-158-45-43-52Z" fill="#887c65"/>
+              <path d="m180 259 86-43 153-14 139 39 44 49-58 41-178 23-145-42Z" fill="url(#cadGrass)"/>
+              <path d="m239 276 108-49 166 33-105 58Z" fill="#477866" opacity=".3"/>
+              <g stroke="#e0f0df" stroke-opacity=".16">
+                <path d="m229 265 189 65 M273 240l194 72 M325 222l192 70 M251 317l166-98 M309 338l164-103 M371 346l159-94"/>
+              </g>
+              
+              <path d="m322 202 45-26 119 30-44 26Z" fill="#dae6dd"/>
+              <path d="m442 232 44-26v89l-44 26Z" fill="#7ca7a3"/>
+              <path d="m322 202 120 30v89l-29-7v-59l-61-15v59l-30-8Z" fill="#b8d3c6" stroke="#e7f0e5" stroke-opacity=".65"/>
+              <path d="m352 240 22-13 39 10v18Z" fill="#71978e"/>
+              <path d="m352 299 22-13v-40l-22-6Z" fill="#5f8e82"/>
+              
+              <path d="m228 269 32-18 47 12-31 18Z" fill="#ffbc79"/>
+              <path d="m228 269 48 12v20l-48-12Z" fill="#e88749"/>
+              <path d="m276 281 31-18v20l-31 18Z" fill="#b96335"/>
+              <path d="m228 269v-58l20 5v58Z" fill="#f1a15c"/>
+              <path d="m228 211 32-18 20 5-32 18Z" fill="#ffd094"/>
+              <path d="m248 216 32-18v58l-32 18Z" fill="#cb783d"/>
+              <path d="M513 265v41c0 15 53 15 53 0v-41Z" fill="#45859c"/>
+              <ellipse cx="539.5" cy="265" rx="26.5" ry="10" fill="#9ac8d4" stroke="#d4ebeb"/>
+              <ellipse cx="539.5" cy="265" rx="11" ry="4" fill="#376876"/>
+              
+              <g transform="translate(83 80) rotate(-8 100 70)">
+                <rect x="5" y="8" width="205" height="143" rx="9" fill="#102f35" opacity=".18"/>
+                <rect width="205" height="143" rx="9" fill="#f2f5e9" stroke="#bdccc2"/>
+                <path d="M16 28h173 M16 47h173 M16 66h173 M16 85h173 M16 104h173 M16 123h173 M30 13v116 M52 13v116 M74 13v116 M96 13v116 M118 13v116 M140 13v116 M162 13v116 M184 13v116" stroke="#527969" stroke-opacity=".1"/>
+                <path d="M48 103V48h103v55h-24V70H72v33Z" stroke="#295b62" stroke-width="2.5"/>
+                <g stroke="#d17c3a" stroke-width="1.2">
+                  <path d="M48 34h103 M48 28v13 M151 28v13 M165 48v55 M159 48h12 M159 103h12"/>
+                  <path d="m47 98 0 10 m-5-5h10"/>
+                </g>
+                <g fill="#9d542c" font-family="ui-monospace,monospace" font-size="11">
+                  <text x="83" y="27">60 mm</text><text x="176" y="80" transform="rotate(90 176 80)">30 mm</text>
+                </g>
+              </g>
+              <path d="M299 146q65-27 96 26" stroke="#f5bc80" stroke-width="2" stroke-dasharray="5 7"/>
+              <path d="m384 167 12 9 1-16" stroke="#f5bc80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </a>
       </section>
 
       <section class="roadmap-section" id="naprej" aria-labelledby="roadmap-heading">
         <div class="section-heading">
           <div>
-            <div class="section-kicker">roadmap · brez fake linkov</div>
+            <div class="section-kicker">raziskuj še naprej</div>
             <h2 id="roadmap-heading">Naslednji kosi sestavljanke.</h2>
           </div>
           <p>
-            Spodnje kartice kažejo smer, kam bo stran rasla naprej.
+            Pripravljamo nove dejavnosti za spoznavanje materialov, strojev in izdelave.
           </p>
         </div>
 
         <div class="roadmap-grid">
 
           <article class="road-card">
-            <span class="road-no">03</span>
+            <span class="road-no">04</span>
             <span class="road-status">v pripravi</span>
             <div class="road-visual" aria-hidden="true">
               <svg viewBox="0 0 420 280">
@@ -1028,7 +1082,7 @@
           </article>
 
           <article class="road-card">
-            <span class="road-no">04</span>
+            <span class="road-no">05</span>
             <span class="road-status">v pripravi</span>
             <div class="road-visual" aria-hidden="true">
               <svg viewBox="0 0 420 280">
@@ -1048,7 +1102,7 @@
           </article>
 
           <article class="road-card">
-            <span class="road-no">05</span>
+            <span class="road-no">06</span>
             <span class="road-status">v pripravi</span>
             <div class="road-visual" aria-hidden="true">
               <svg viewBox="0 0 420 280">
@@ -1071,7 +1125,7 @@
           </article>
 
           <article class="road-card">
-            <span class="road-no">06</span>
+            <span class="road-no">07</span>
             <span class="road-status">v pripravi</span>
             <div class="road-visual" aria-hidden="true">
               <svg viewBox="0 0 420 280">
@@ -1089,7 +1143,7 @@
           </article>
 
           <article class="road-card">
-            <span class="road-no">07</span>
+            <span class="road-no">08</span>
             <span class="road-status">v pripravi</span>
             <div class="road-visual" aria-hidden="true">
               <svg viewBox="0 0 420 280">
@@ -1133,10 +1187,7 @@
       const motionToggle = document.getElementById("motionToggle");
       const reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-      /*
-        Particle engine je intentionally plain canvas.
-        No library, no dependency drama, GitHub Pages odpre file in gremo.
-      */
+      
       const PARTICLE_COUNT = 620;
       const particles = [];
       let targets = [];
@@ -1144,6 +1195,8 @@
       let lastMorph = 0;
       let shapeIndex = 0;
       let raf = 0;
+      let inView = true, pageActive = true, lastDraw = 0;
+      if(!ctx){motionToggle.hidden=true;return;}
 
       const SHAPES = [
         {key:"bridge", label:"most · konstrukcija", h:"L = 120", v:"H = 34"},
@@ -1175,9 +1228,9 @@
         }
 
         setShape(shapeIndex,true);
+        drawParticles(lastDraw,false);
       }
 
-      // line sampler = easiest way to "draw" technical silhouettes with dots.
       function linePoints(x1,y1,x2,y2,step=5){
         const dx=x2-x1,dy=y2-y1;
         const len=Math.hypot(dx,dy);
@@ -1212,10 +1265,7 @@
         return out;
       }
 
-      /*
-        Shapes niso clipart. Bolj "technical silhouette", da dots zgledajo kot skica/model,
-        ne kot emoji, ki je pomotoma padel v CAD.
-      */
+      
       function buildShape(key,w,h){
         const cx=w*.43;
         const cy=h*.49;
@@ -1298,8 +1348,8 @@
       }
 
       function normalizedTargets(points,w,h){
-        // Če shape da premalo pointov, jih lepo ponavljamo; če jih da preveč, sample.
-        // Ni treba komplicirat z Delaunay triangulation, we're not launching a satellite here.
+
+
         const out=[];
         for(let i=0;i<PARTICLE_COUNT;i++){
           const src=points[Math.floor(i*points.length/PARTICLE_COUNT) % Math.max(points.length,1)] || [w/2,h/2];
@@ -1332,17 +1382,18 @@
         });
       }
 
-      function updateParticles(t){
+      function drawParticles(t,advance){
         const r=heroArt.getBoundingClientRect();
 
-        if(running && !reduceMQ.matches && t-lastMorph>4300){
+        if(advance && t-lastMorph>4300){
           lastMorph=t;
           setShape(shapeIndex+1);
         }
 
         ctx.clearRect(0,0,r.width,r.height);
 
-        const mouseQuiet=running && !reduceMQ.matches;
+        const mouseQuiet=advance;
+        lastDraw=t;
         particles.forEach((p,i)=>{
           if(mouseQuiet){
             const spring=.028;
@@ -1350,16 +1401,12 @@
             p.vx=(p.vx+(p.tx-p.x)*spring)*damping;
             p.vy=(p.vy+(p.ty-p.y)*spring)*damping;
 
-            // micro life: shape naj diha, ne pa plesat po mizi.
             const drift=Math.sin(t*.0013+p.seed)*.025;
             p.vx+=Math.cos(p.seed)*drift;
             p.vy+=Math.sin(p.seed)*drift;
 
             p.x+=p.vx;
             p.y+=p.vy;
-          }else{
-            p.x+=(p.tx-p.x)*.16;
-            p.y+=(p.ty-p.y)*.16;
           }
 
           const pulse=.8+.2*Math.sin(t*.0015+p.seed);
@@ -1371,44 +1418,41 @@
           ctx.fill();
         });
 
-        raf=requestAnimationFrame(updateParticles);
       }
 
-      motionToggle.addEventListener("click",()=>{
-        running=!running;
-        motionToggle.setAttribute("aria-pressed",String(!running));
-        motionToggle.textContent=running ? "Ustavi gibanje" : "Nadaljuj gibanje";
-        if(running)lastMorph=performance.now();
-      });
-
-      // ResizeObserver > random window resize hacks. Browser že zna povedat, da se je stage spremenil.
-      const ro=new ResizeObserver(()=>fitCanvas());
-      ro.observe(heroArt);
-
-      reduceMQ.addEventListener?.("change",()=>{
-        if(reduceMQ.matches){
-          running=false;
-          motionToggle.textContent="Gibanje izklopljeno";
+      const canAnimate=()=>running && !reduceMQ.matches && inView && !document.hidden && pageActive;
+      function frame(t){
+        raf=0;
+        if(!canAnimate())return;
+        drawParticles(t,true);
+        raf=requestAnimationFrame(frame);
+      }
+      function syncMotion(){
+        const paused=!running || reduceMQ.matches;
+        motionToggle.setAttribute("aria-pressed",String(paused));
+        motionToggle.disabled=reduceMQ.matches;
+        motionToggle.textContent=reduceMQ.matches ? "Gibanje izklopljeno" : running ? "Ustavi gibanje" : "Nadaljuj gibanje";
+        if(canAnimate()){
+          if(!raf){lastMorph=performance.now();raf=requestAnimationFrame(frame);}
         }else{
-          running=true;
-          motionToggle.textContent="Ustavi gibanje";
-          lastMorph=performance.now();
+          cancelAnimationFrame(raf);raf=0;
         }
-      });
-
-      fitCanvas();
-      if(reduceMQ.matches){
-        running=false;
-        motionToggle.textContent="Gibanje izklopljeno";
       }
-      raf=requestAnimationFrame(updateParticles);
-
-      /*
-        Page leave cleanup. Ni big deal na navadni strani, ampak clean code > ghost raf loop.
-      */
+      motionToggle.addEventListener("click",()=>{running=!running;syncMotion();});
+      reduceMQ.addEventListener?.("change",syncMotion);
+      document.addEventListener("visibilitychange",syncMotion);
+      const ro=typeof ResizeObserver!=="undefined" ? new ResizeObserver(fitCanvas) : null;
+      const io=typeof IntersectionObserver!=="undefined" ? new IntersectionObserver(entries=>{
+        inView=entries[0].isIntersecting;syncMotion();
+      }) : null;
+      if(!ro)window.addEventListener("resize",fitCanvas);
+      ro?.observe(heroArt);io?.observe(heroArt);
+      fitCanvas();syncMotion();
       window.addEventListener("pagehide",()=>{
-        cancelAnimationFrame(raf);
-        ro.disconnect();
+        pageActive=false;syncMotion();ro?.disconnect();io?.disconnect();
+      });
+      window.addEventListener("pageshow",()=>{
+        pageActive=true;ro?.observe(heroArt);io?.observe(heroArt);fitCanvas();syncMotion();
       });
     })();
   </script>
