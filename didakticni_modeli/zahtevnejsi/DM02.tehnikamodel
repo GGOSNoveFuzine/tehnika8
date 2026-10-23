@@ -1,0 +1,989 @@
+{
+  "format": "tehnikamodel",
+  "version": 2,
+  "madeIn": "Didaktična zbirka · 5 mm",
+  "humanNote": "Didaktični model z vidnimi kockami, zunanjimi oznakami A–F in številko. Mesta gravur so shranjena; posnetja 0,5 mm in gravure se ustvarijo pri označenem STL izvozu. Prilagojena oblika na mreži 5 mm.",
+  "modelName": "02 · Nosilec s poševnim rebrom",
+  "studentName": "",
+  "mode": "didactic",
+  "cellSizeMm": 5,
+  "gridSize": [
+    10,
+    10,
+    10
+  ],
+  "savedAt": "2026-10-05T16:43:48.113Z",
+  "objectRotation": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      1
+    ]
+  ],
+  "objectTranslation": [
+    0,
+    0,
+    0
+  ],
+  "didactic": {
+    "schema": 1,
+    "id": "DM02",
+    "printCode": "02",
+    "directions": {
+      "A": [
+        0,
+        0,
+        1
+      ],
+      "B": [
+        0,
+        1,
+        0
+      ],
+      "C": [
+        1,
+        0,
+        0
+      ],
+      "D": [
+        0,
+        0,
+        -1
+      ],
+      "E": [
+        0,
+        -1,
+        0
+      ],
+      "F": [
+        -1,
+        0,
+        0
+      ]
+    },
+    "marks": {
+      "A": {
+        "cell": [
+          6,
+          2,
+          5
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "B": {
+        "cell": [
+          0,
+          5,
+          0
+        ],
+        "normal": [
+          0,
+          1,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "C": {
+        "cell": [
+          7,
+          2,
+          2
+        ],
+        "normal": [
+          1,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "D": {
+        "cell": [
+          3,
+          2,
+          0
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "E": {
+        "cell": [
+          3,
+          0,
+          0
+        ],
+        "normal": [
+          0,
+          -1,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "F": {
+        "cell": [
+          0,
+          2,
+          0
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    "numberMark": {
+      "cell": [
+        6,
+        0,
+        5
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "cells": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 5,
+      "type": "full"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "z": 5,
+      "type": "full"
+    }
+  ],
+  "collection": {
+    "group": "zahtevnejsi",
+    "difficulty": 4,
+    "description": "Plošča, visoka stena in sredinsko poševno rebro.",
+    "reference": "Prilagoditev po zgledu modela 26; lastne mere na mreži 5 mm.",
+    "printCopies": 1
+  }
+}

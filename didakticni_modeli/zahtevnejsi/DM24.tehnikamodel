@@ -1,0 +1,1091 @@
+{
+  "format": "tehnikamodel",
+  "version": 2,
+  "madeIn": "Didaktična zbirka · 5 mm",
+  "humanNote": "Didaktični model z vidnimi kockami, zunanjimi oznakami A–F in številko. Mesta gravur so shranjena; posnetja 0,5 mm in gravure se ustvarijo pri označenem STL izvozu. Prilagojena oblika na mreži 5 mm.",
+  "modelName": "24 · Tri poševnine s spodnjim izrezom",
+  "studentName": "",
+  "mode": "didactic",
+  "cellSizeMm": 5,
+  "gridSize": [
+    10,
+    10,
+    10
+  ],
+  "savedAt": "2026-10-05T16:58:23.414Z",
+  "objectRotation": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      1
+    ]
+  ],
+  "objectTranslation": [
+    0,
+    0,
+    0
+  ],
+  "didactic": {
+    "schema": 1,
+    "id": "DM24",
+    "printCode": "24",
+    "directions": {
+      "A": [
+        0,
+        0,
+        1
+      ],
+      "B": [
+        0,
+        1,
+        0
+      ],
+      "C": [
+        1,
+        0,
+        0
+      ],
+      "D": [
+        0,
+        0,
+        -1
+      ],
+      "E": [
+        0,
+        -1,
+        0
+      ],
+      "F": [
+        -1,
+        0,
+        0
+      ]
+    },
+    "marks": {
+      "A": {
+        "cell": [
+          3,
+          5,
+          4
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "B": {
+        "cell": [
+          3,
+          5,
+          2
+        ],
+        "normal": [
+          0,
+          1,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "C": {
+        "cell": [
+          6,
+          3,
+          1
+        ],
+        "normal": [
+          1,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "D": {
+        "cell": [
+          0,
+          3,
+          0
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "E": {
+        "cell": [
+          5,
+          0,
+          0
+        ],
+        "normal": [
+          0,
+          -1,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "F": {
+        "cell": [
+          0,
+          5,
+          0
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    "numberMark": {
+      "cell": [
+        3,
+        2,
+        4
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "cells": [
+    {
+      "x": 0,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "xz",
+      "cutTri": "a"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "z": 3,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "z": 4,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 2,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 3,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "z": 4,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": 1,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 0,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 1,
+      "type": "full"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "z": 2,
+      "type": "cut",
+      "cutPlane": "yz",
+      "cutTri": "a"
+    }
+  ],
+  "collection": {
+    "group": "zahtevnejsi",
+    "difficulty": 5,
+    "description": "Dve pravokotno usmerjeni strešni poševnini, tretja nižja prečna poševnina in spodnji predor. Bolj prilagojena oblika: kompleksni vogal iz zgleda je razdeljen na ploskve, ki jih podpira trenutni format.",
+    "reference": "Prilagoditev po zgledu modela 48, stran 15: Izometrična projekcija - vaja; lastne mere na mreži 5 mm.",
+    "printCopies": 1
+  }
+}

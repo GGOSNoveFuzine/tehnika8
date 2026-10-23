@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "models": [
+    {
+      "id": "DM_L01",
+      "file": "lazji/DM_L01.tehnikamodel"
+    },
+    {
+      "id": "DM_L02",
+      "file": "lazji/DM_L02.tehnikamodel"
+    },
+    {
+      "id": "DM_L03",
+      "file": "lazji/DM_L03.tehnikamodel"
+    },
+    {
+      "id": "DM_L04",
+      "file": "lazji/DM_L04.tehnikamodel"
+    },
+    {
+      "id": "DM_L05",
+      "file": "lazji/DM_L05.tehnikamodel"
+    },
+    {
+      "id": "DM01",
+      "file": "zahtevnejsi/DM01.tehnikamodel"
+    },
+    {
+      "id": "DM02",
+      "file": "zahtevnejsi/DM02.tehnikamodel"
+    },
+    {
+      "id": "DM03",
+      "file": "zahtevnejsi/DM03.tehnikamodel"
+    },
+    {
+      "id": "DM04",
+      "file": "zahtevnejsi/DM04.tehnikamodel"
+    },
+    {
+      "id": "DM05",
+      "file": "zahtevnejsi/DM05.tehnikamodel"
+    },
+    {
+      "id": "DM06",
+      "file": "zahtevnejsi/DM06.tehnikamodel"
+    },
+    {
+      "id": "DM07",
+      "file": "zahtevnejsi/DM07.tehnikamodel"
+    },
+    {
+      "id": "DM08",
+      "file": "zahtevnejsi/DM08.tehnikamodel"
+    },
+    {
+      "id": "DM09",
+      "file": "zahtevnejsi/DM09.tehnikamodel"
+    },
+    {
+      "id": "DM10",
+      "file": "zahtevnejsi/DM10.tehnikamodel"
+    },
+    {
+      "id": "DM11",
+      "file": "zahtevnejsi/DM11.tehnikamodel"
+    },
+    {
+      "id": "DM12",
+      "file": "zahtevnejsi/DM12.tehnikamodel"
+    },
+    {
+      "id": "DM13",
+      "file": "zahtevnejsi/DM13.tehnikamodel"
+    },
+    {
+      "id": "DM14",
+      "file": "zahtevnejsi/DM14.tehnikamodel"
+    },
+    {
+      "id": "DM15",
+      "file": "zahtevnejsi/DM15.tehnikamodel"
+    },
+    {
+      "id": "DM16",
+      "file": "zahtevnejsi/DM16.tehnikamodel"
+    },
+    {
+      "id": "DM17",
+      "file": "zahtevnejsi/DM17.tehnikamodel"
+    },
+    {
+      "id": "DM18",
+      "file": "zahtevnejsi/DM18.tehnikamodel"
+    },
+    {
+      "id": "DM19",
+      "file": "zahtevnejsi/DM19.tehnikamodel"
+    },
+    {
+      "id": "DM20",
+      "file": "zahtevnejsi/DM20.tehnikamodel"
+    },
+    {
+      "id": "DM21",
+      "file": "zahtevnejsi/DM21.tehnikamodel"
+    },
+    {
+      "id": "DM22",
+      "file": "zahtevnejsi/DM22.tehnikamodel"
+    },
+    {
+      "id": "DM23",
+      "file": "zahtevnejsi/DM23.tehnikamodel"
+    },
+    {
+      "id": "DM24",
+      "file": "zahtevnejsi/DM24.tehnikamodel"
+    },
+    {
+      "id": "DM25",
+      "file": "zahtevnejsi/DM25.tehnikamodel"
+    },
+    {
+      "id": "DM26",
+      "file": "zahtevnejsi/DM26.tehnikamodel"
+    },
+    {
+      "id": "DM27",
+      "file": "zahtevnejsi/DM27.tehnikamodel"
+    }
+  ]
+}
