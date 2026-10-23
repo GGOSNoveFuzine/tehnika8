@@ -1221,6 +1221,12 @@
   .dm-answer:has(.dm-card[hidden]){grid-template-columns:1fr;max-width:850px;margin-left:auto;margin-right:auto}
   #dmAnswerCaption{grid-column:1/-1;margin:0;font-size:14px;color:#365869}
   #dmExerciseStatus{font-size:13px;color:#466170;line-height:1.5;overflow-wrap:anywhere}
+
+  .dm-hidden-controls{align-items:center}.dm-hidden-controls label{font-size:13px;display:flex;gap:7px;align-items:center}
+  .dm-code-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.dm-code-row label{font-size:13px;font-weight:700}.dm-code-row input{flex:1;min-width:220px;padding:10px;border:1px solid #93a5b0;border-radius:5px;font-family:monospace}
+  .dm-random-panel{margin:18px 0;border:1px solid #b8c5ce;border-radius:8px;padding:12px}.dm-random-panel summary{cursor:pointer;font-weight:700;color:#244555}.dm-random-controls{margin-top:14px}.dm-controls .dm-inline{display:flex;align-items:center;gap:8px;min-height:40px}
+  .dm-printed-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;max-height:270px;overflow:auto;margin-top:12px}.dm-printed-list label{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:7px;background:#f3f6f8;border-radius:4px}.dm-printed-list input{margin-top:3px}
+  #dmPrintedCount{align-self:center;font-size:13px}#dmExerciseStatus{white-space:pre-wrap;overflow-wrap:anywhere}.dm-controls select#dmModelSelect{max-width:400px}
   .dm-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
   @media(max-width:700px){.dm-overlay{padding:8px}.dm-board{padding:14px}.dm-answer{grid-template-columns:1fr}.dm-head h2{font-size:20px}.dm-controls label:first-child{width:100%}.dm-controls select#dmModelSelect{max-width:100%;width:100%}.dm-task{font-size:16px}}
 </style>
@@ -1490,6 +1496,13 @@
 
         <section class="builder-section">
           <h3>5 · Shrani / naloži model</h3>
+          <div id="builderDraftBox" style="padding:9px;margin-bottom:10px;border:1px solid #9aa8b0;background:#f2f6f8;font-size:12px">
+            <div id="builderDraftStatus" role="status" aria-live="polite">Osnutek se samodejno shrani v tem brskalniku.</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+              <button id="builderRestoreDraft" type="button" hidden>Obnovi osnutek</button>
+              <button id="builderDiscardDraft" type="button">Odstrani osnutek</button>
+            </div>
+          </div>
           <div class="builder-filebox">
             <label for="builderModelName">Ime modela</label>
             <input id="builderModelName" type="text" maxlength="80" value="moje_telo" autocomplete="off">
@@ -1509,9 +1522,15 @@
 
               <div class="builder-submit-box" style="grid-column:1/-1">
                 <button id="builderSendTeacherBtn" class="builder-submit-btn" type="button">Pošlji učitelju</button>
-                <div id="builderSendTeacherStatus" class="builder-submit-status" aria-live="polite">
-                  Oddaja je dovoljena največ enkrat na 60 sekund na posamezen brskalnik.
+                <div class="builder-submit-recovery" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px">
+                  <button id="builderCheckReceiptBtn" type="button" hidden>Preveri prejem</button>
+                  <button id="builderRetrySubmitBtn" type="button" hidden>Ponovi isto oddajo</button>
+                  <button id="builderDownloadSubmittedBtn" type="button" hidden>Shrani poslano kopijo</button>
                 </div>
+                <div id="builderSendTeacherStatus" class="builder-submit-status" role="status" aria-live="polite">
+                  Potrdilo se pokaže šele, ko je model shranjen v učiteljevi mapi. Nova oddaja je dovoljena enkrat na 60 sekund.
+                </div>
+                <p id="builderSubmissionDetail" style="font-size:11px;line-height:1.5;margin:6px 0 0;overflow-wrap:anywhere"></p>
               </div>
               <div id="builderGrooveControls" style="grid-column:1/-1;padding:10px;border:1px solid #9aa8b0;background:#eef2f4" hidden>
                 <label for="builderGrooveSize">Velikost utorov pri izvozu STL · širina × globina</label>
@@ -1602,14 +1621,30 @@
     <p>Vzemi fizični model, postavi označeni strani po navodilu in nariši telo na papir. Nato pokaži rešitev in primerjaj svojo risbo.</p>
     <div class="dm-controls">
       <label>Model<select id="dmModelSelect" aria-label="Didaktični model"></select></label>
-      <label>Zgoraj<select id="dmTop"><option>A</option></select></label>
-      <label>Položaj druge strani<select id="dmReference"><option value="front">Spredaj</option><option value="left">Levo</option></select></label>
-      <label><span id="dmFrontLabel">Spredaj</span><select id="dmFront"><option>B</option></select></label>
+      <label>Podani strani<select id="dmReference"><option value="front-left">Spredaj in levo</option><option value="front">Zgoraj in spredaj</option><option value="left">Zgoraj in levo</option></select></label>
+      <label><span id="dmTopLabel">Spredaj</span><select id="dmTop"><option>A</option></select></label>
+      <label><span id="dmFrontLabel">Levo</span><select id="dmFront"><option>C</option></select></label>
       <label>Naloga<select id="dmDrawingKind"><option value="both">Obe projekciji</option><option value="iso">Izometrična risba</option><option value="ortho">Pravokotne projekcije</option></select></label>
       <button id="dmShowAnswer" class="primary" disabled>Pokaži rešitev</button>
     </div>
     <p class="dm-task" id="dmExerciseTask">Izberi ali naloži didaktični model.</p>
-    <label><input type="checkbox" id="dmHiddenEdges" checked> Pokaži skrite robove v pravokotnih projekcijah</label>
+    <div class="dm-toolbar dm-hidden-controls">
+      <label><input type="checkbox" id="dmIsoHiddenEdges" checked> Skriti robovi: izometrija</label>
+      <label><input type="checkbox" id="dmHiddenEdges" checked> Skriti robovi: pravokotne projekcije</label>
+      <button id="dmPrintTask" disabled>Natisni nalogo</button><button id="dmPrintSolution" disabled>Natisni rešitev</button>
+    </div>
+    <div class="dm-code-row"><label for="dmTaskCode">Koda za ponovitev naloge</label><input id="dmTaskCode" type="text" autocomplete="off" spellcheck="false" placeholder="T8:DM_L04:…"><button id="dmCopyTask" disabled>Kopiraj kodo</button><button id="dmLoadTaskCode">Odpri kodo</button></div>
+    <details class="dm-random-panel">
+      <summary>Naključne naloge in moji natisnjeni modeli</summary>
+      <div class="dm-controls dm-random-controls">
+        <label>Težavnost<select id="dmDifficulty"><option value="all">Vsi modeli</option><option value="easy">Lažji (DM_L)</option><option value="advanced">Zahtevnejši (DM)</option></select></label>
+        <label class="dm-inline"><input id="dmOnlyPrinted" type="checkbox" checked> Samo moji natisnjeni modeli</label>
+        <button id="dmRandomTask" class="primary">Naključna naloga</button>
+      </div>
+      <p class="dm-note">Naključno izbere model in orientacijo. Vrsta risbe ostane taka, kot je izbrana zgoraj. Označi modele, ki jih imaš na voljo za pouk; izbor se shrani v tem brskalniku.</p>
+      <div class="dm-toolbar"><button id="dmPrintedAll">Označi vse naložene</button><button id="dmPrintedNone">Počisti izbor naloženih</button><span id="dmPrintedCount"></span></div>
+      <div id="dmPrintedList" class="dm-printed-list"></div>
+    </details>
     <div class="dm-answer" id="dmAnswer" hidden>
       <p id="dmAnswerCaption"></p>
       <div class="dm-card" id="dmIsoCard"><svg id="dmIsoSvg" role="img" aria-label="Izometrična rešitev"></svg></div>
@@ -3511,7 +3546,7 @@
   function render(){
     // Full-screen teacher/builder overlays completely cover the main scene.
     // Skip its expensive canvas redraw while either overlay is open.
-    if(builderOverlay.classList.contains("open") || qaOverlay.classList.contains("open")){
+    if(document.hidden || builderOverlay.classList.contains("open") || qaOverlay.classList.contains("open") || !document.getElementById("dmExerciseOverlay").hidden){
       requestAnimationFrame(render);
       return;
     }
@@ -3721,6 +3756,7 @@
 
   function markBuilderGeometryChanged(){
     builderState.projectionRevision++;
+    scheduleBuilderDraft();
     builderProjectionCache.clear();
     dmRefresh();
     requestBuilderRender({threeD:true,projection:builderModeHasProjections()});
@@ -4366,6 +4402,7 @@
       return;
     }
 
+    pushBuilderHistory();
     const nextRotation=normalizedQuarterTurnMatrix(
       mulMat3(Q,builderState.objectRotation)
     );
@@ -4392,6 +4429,8 @@
   }
 
   function resetBuilderObjectRotation(){
+    if(!builderState.cells.size)return;
+    pushBuilderHistory();
     const nextRotation=cloneMat3(BUILDER_ROT_IDENTITY);
     const packedTranslation=builderPackedTranslationForRotation(nextRotation);
     const rebased=rebaseBuilderCellsForWorldGrid(nextRotation,packedTranslation);
@@ -4525,7 +4564,14 @@
   function cloneBuilderCells(){
     const copy=new Map();
     builderState.cells.forEach((v,k)=>copy.set(k,{...v}));
-    if(builderMode.id==="didactic"){copy.dmState=dmClone(dmState);copy.dmRotation=cloneMat3(builderState.objectRotation);copy.dmTranslation=builderState.objectTranslation.slice();}
+    copy.dmState=dmClone(dmState);
+    copy.dmRotation=cloneMat3(builderState.objectRotation);
+    copy.dmTranslation=builderState.objectTranslation.slice();
+    copy.builderLayer=builderState.layer;
+    copy.modelName=builderModelName.value;
+    copy.studentName=builderStudentName.value;
+    copy.studentClass=builderStudentClass.value;
+    copy.roomBase=document.getElementById("builderRoomBase").checked;
     return copy;
   }
 
@@ -4540,6 +4586,12 @@
     if(!prev)return;
     builderState.cells=prev;
     if(prev.dmState){dmState=dmClone(prev.dmState);builderState.objectRotation=cloneMat3(prev.dmRotation);builderState.objectTranslation=prev.dmTranslation.slice();}
+    builderState.layer=clamp(prev.builderLayer??0,0,builderHeight()-1);
+    if(prev.modelName!==undefined)builderModelName.value=prev.modelName;
+    if(prev.studentName!==undefined)builderStudentName.value=prev.studentName;
+    if(prev.studentClass!==undefined)builderStudentClass.value=prev.studentClass;
+    document.getElementById("builderRoomBase").checked=!!prev.roomBase;
+    syncBuilderAuthorInfo();syncBuilderRoomExportLabel();setBuilderLayer(builderState.layer);
     markBuilderGeometryChanged();
     renderLayerGrid();
     updateBuilderStatus("Zadnja sprememba je razveljavljena.");
@@ -4804,7 +4856,10 @@
     // Če ni ne geometrije ne imena, res ni nič za počistiti.
     if(!hadGeometry && !hadStudentName)return;
 
-    if(hadGeometry)pushBuilderHistory();
+    if(builderDraft.dirty && !window.confirm("Počistim trenutni model in njegov osnutek? Model lahko prej shraniš kot .tehnikamodel."))return;
+    pushBuilderHistory();
+    builderDraft.offered=null;
+    document.getElementById("builderRestoreDraft").hidden=true;
 
     builderState.cells.clear();
     builderState.objectRotation=cloneMat3(BUILDER_ROT_IDENTITY);
@@ -4821,6 +4876,7 @@
   }
 
   function loadBuilderExample(){
+    if(!confirmBuilderReplacement())return;
     pushBuilderHistory();
     builderState.cells.clear();
     builderState.objectRotation=cloneMat3(BUILDER_ROT_IDENTITY);
@@ -5002,169 +5058,341 @@
     a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
 
+    builderDraft.dirty=false;
+    flushBuilderDraft();
     updateBuilderStatus(
       `Model "${data.modelName}" je pripravljen za shranjevanje v formatu .tehnikamodel v2.`
     );
   }
 
 
+  // Local editor recovery. A stored draft is offered, never silently loaded.
+  const BUILDER_DRAFT_KEY="tehnika8_builder_draft_v1";
+  const builderDraft={ready:false,timer:0,dirty:false,offered:null,persisted:false,suppressed:false,revision:0,savedRevision:0,expectedRaw:null};
+  function draftStatus(message){
+    document.getElementById("builderDraftStatus").textContent=message;
+  }
+  function confirmBuilderReplacement(){
+    return !builderDraft.dirty || window.confirm("Trenutni model ima neshranjene spremembe. Zamenjam ga? Za ločeno kopijo najprej uporabi Shrani .tehnikamodel.");
+  }
+  function scheduleBuilderDraft(){
+    if(!builderDraft.ready)return;
+    builderDraft.dirty=true;builderDraft.persisted=false;builderDraft.suppressed=false;builderDraft.revision++;
+    clearTimeout(builderDraft.timer);
+    if(builderDraft.offered){
+      draftStatus("Na voljo je starejši osnutek. Obnovi ali odstrani ga, da se začne shranjevati trenutno delo.");
+      return;
+    }
+    draftStatus("Shranjujem osnutek …");
+    builderDraft.timer=setTimeout(flushBuilderDraft,700);
+  }
+  function flushBuilderDraft(){
+    clearTimeout(builderDraft.timer);builderDraft.timer=0;
+    if(!builderDraft.ready || builderDraft.offered || builderDraft.suppressed || builderDraft.revision===builderDraft.savedRevision)return;
+    try{
+      const existing=localStorage.getItem(BUILDER_DRAFT_KEY);
+      if(existing!==builderDraft.expectedRaw){
+        builderDraft.persisted=false;
+        draftStatus("Drug zavihek je spremenil shranjeni osnutek. Trenutno telo shrani kot .tehnikamodel; osnutek drugega zavihka je ohranjen.");
+        return;
+      }
+      if(!builderState.cells.size){
+        localStorage.removeItem(BUILDER_DRAFT_KEY);
+        builderDraft.expectedRaw=null;builderDraft.savedRevision=builderDraft.revision;
+        builderDraft.persisted=true;
+        draftStatus("Osnutek se samodejno shrani v tem brskalniku, ko sestaviš telo.");
+        return;
+      }
+      const model=builderModelToPortableObject();
+      const draft={schema:1,model,studentClass:builderStudentClass.value,
+        layer:builderState.layer,roomBase:document.getElementById("builderRoomBase").checked};
+      const raw=JSON.stringify(draft);
+      localStorage.setItem(BUILDER_DRAFT_KEY,raw);
+      builderDraft.expectedRaw=raw;builderDraft.savedRevision=builderDraft.revision;
+      builderDraft.persisted=true;
+      draftStatus("Osnutek je shranjen v tem brskalniku. To ni oddaja učitelju.");
+    }catch(err){
+      builderDraft.persisted=false;
+      draftStatus("Osnutka ni mogoče shraniti v brskalnik. Uporabi Shrani .tehnikamodel.");
+    }
+  }
+  function restoreBuilderDraft(){
+    const draft=builderDraft.offered;if(!draft)return;
+    if(!confirmBuilderReplacement())return;
+    try{
+      const check=validatePortableModel(draft.model);
+      if(!check.ok)throw new Error(check.problems.slice(0,2).join(" "));
+      loadPortableModelObject(draft.model);
+      builderStudentClass.value=String(draft.studentClass||"").slice(0,20);
+      document.getElementById("builderRoomBase").checked=builderMode.id==="room" && !!draft.roomBase;
+      syncBuilderRoomExportLabel();
+      setBuilderLayer(clamp(Number(draft.layer)||0,0,builderHeight()-1));
+      builderDraft.offered=null;builderDraft.dirty=true;
+      document.getElementById("builderRestoreDraft").hidden=true;
+      flushBuilderDraft();
+      updateBuilderStatus("Osnutek je obnovljen. Za trajno kopijo ga shrani kot .tehnikamodel.");
+    }catch(err){draftStatus("Osnutka ne morem obnoviti. "+err.message);}
+  }
+  function initBuilderDraft(){
+    try{
+      const raw=localStorage.getItem(BUILDER_DRAFT_KEY);
+      builderDraft.expectedRaw=raw;
+      if(raw){
+        const data=JSON.parse(raw);
+        if(data.schema!==1 || !data.model || !validatePortableModel(data.model).ok)throw new Error("invalid draft");
+        builderDraft.offered=data;
+        document.getElementById("builderRestoreDraft").hidden=false;
+        draftStatus("Najden osnutek: "+(data.model.modelName||"model")+". Obnovi ga ali odstrani iz tega brskalnika.");
+      }
+    }catch(err){draftStatus("Shranjeni osnutek ni berljiv. Lahko ga odstraniš in začneš znova.");}
+    builderDraft.ready=true;
+    document.getElementById("builderRestoreDraft").addEventListener("click",restoreBuilderDraft);
+    document.getElementById("builderDiscardDraft").addEventListener("click",()=>{
+      if(!window.confirm("Odstranim shranjeni osnutek iz tega brskalnika? Trenutno odprto telo ostane; naslednja sprememba ustvari nov osnutek."))return;
+      try{
+        localStorage.removeItem(BUILDER_DRAFT_KEY);
+        builderDraft.offered=null;builderDraft.persisted=false;builderDraft.suppressed=true;builderDraft.expectedRaw=null;
+        clearTimeout(builderDraft.timer);
+        document.getElementById("builderRestoreDraft").hidden=true;
+        draftStatus("Osnutek je odstranjen. Naslednja sprememba začne novo samodejno shranjevanje.");
+      }catch(err){draftStatus("Osnutka ni mogoče odstraniti.");}
+    });
+    for(const input of [builderModelName,builderStudentName,builderStudentClass])input.addEventListener("input",scheduleBuilderDraft);
+    document.getElementById("builderRoomBase").addEventListener("change",scheduleBuilderDraft);
+    // Capturing the previous metadata makes authoring changes undoable too.
+    const markControls=["dmId","dmNumber","dmMarkA","dmMarkB","dmMarkC","dmMarkD","dmMarkE","dmMarkF","dmNumberMark"];
+    for(const id of markControls){
+      const el=document.getElementById(id);
+      el.addEventListener("change",()=>{if(builderMode.id==="didactic")pushBuilderHistory();},true);
+      el.addEventListener("change",scheduleBuilderDraft);
+    }
+    document.getElementById("dmAutoMarks").addEventListener("click",()=>{if(builderState.cells.size)pushBuilderHistory();},true);
+    document.getElementById("dmAutoMarks").addEventListener("click",scheduleBuilderDraft);
+    window.addEventListener("pagehide",flushBuilderDraft);
+    document.addEventListener("visibilitychange",()=>{if(document.hidden)flushBuilderDraft();});
+    window.addEventListener("beforeunload",e=>{
+      if(!builderDraft.dirty)return;
+      flushBuilderDraft();
+      if(!builderDraft.persisted){e.preventDefault();e.returnValue="";}
+    });
+  }
+
   // ----------------------------------------------------------------------
-  // ODDAJA MODELA UČITELJU · prva različica brez CAPTCHA
+  // ODDAJA UČITELJU: nespremenljiva kopija + potrdilo iz sprejemnika v3.
+  // POST no-cors samo prenese podatke. Uspeh potrdi izključno status saved.
   // ----------------------------------------------------------------------
   const TEACHER_SUBMIT_URL =
     "https://script.google.com/macros/s/AKfycbw2LcMsS-bnKBi3cfQb-kpeBuCakztXY95ZpnwHT-BjnJriqJvUeNRQ7MrE6419Bi76/exec";
   const TEACHER_SUBMIT_COOLDOWN_MS = 60 * 1000;
   const TEACHER_SUBMIT_CLIENT_KEY = "tehnika8_submit_client_id_v1";
   const TEACHER_SUBMIT_LAST_KEY = "tehnika8_submit_last_v1";
+  const TEACHER_SUBMIT_RECEIPT_KEY = "tehnika8_submit_receipt_v3";
+  const TEACHER_SUBMIT_POST_TIMEOUT_MS = 20000;
+  const TEACHER_SUBMIT_STATUS_TIMEOUT_MS = 8000;
+  let builderSubmitBusy=false, builderSubmitTimer=null, volatileSubmitClientId="";
+  let teacherSubmission=null, teacherSubmitPhase="", teacherSubmitSessionAvailable=true;
+  let teacherSubmitVolatileLast=0;
+  const teacherSubmitEl=id=>document.getElementById(id);
 
-  let builderSubmitBusy=false;
-  let builderSubmitTimer=null;
-  let volatileSubmitClientId="";
-
-  function submitStorageGet(key){
-    try{return localStorage.getItem(key)}catch(err){return null}
-  }
-  function submitStorageSet(key,value){
-    try{localStorage.setItem(key,value);return true}catch(err){return false}
-  }
+  function submitStorageGet(key){try{return localStorage.getItem(key)}catch(err){return null}}
+  function submitStorageSet(key,value){try{localStorage.setItem(key,value);return true}catch(err){return false}}
   function makeSubmitClientId(){
-    if(window.crypto && typeof window.crypto.randomUUID==="function"){
-      return window.crypto.randomUUID();
-    }
-    const bytes=new Uint8Array(16);
+    if(window.crypto && typeof window.crypto.randomUUID==="function")return window.crypto.randomUUID();
     if(window.crypto && typeof window.crypto.getRandomValues==="function"){
-      window.crypto.getRandomValues(bytes);
+      const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
       return [...bytes].map(v=>v.toString(16).padStart(2,"0")).join("");
     }
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+    throw new Error("Brskalnik ne podpira varne oznake oddaje. Uporabi novejši brskalnik ali shrani model na računalnik.");
   }
   function teacherSubmitClientId(){
-    let id=submitStorageGet(TEACHER_SUBMIT_CLIENT_KEY);
-    if(id && id.length>=12)return id;
+    const id=submitStorageGet(TEACHER_SUBMIT_CLIENT_KEY);
+    if(id && /^[A-Za-z0-9_-]{12,100}$/.test(id))return id;
     if(!volatileSubmitClientId)volatileSubmitClientId=makeSubmitClientId();
-    id=volatileSubmitClientId;
-    submitStorageSet(TEACHER_SUBMIT_CLIENT_KEY,id);
-    return id;
+    submitStorageSet(TEACHER_SUBMIT_CLIENT_KEY,volatileSubmitClientId);
+    return volatileSubmitClientId;
   }
   function lastTeacherSubmitTime(){
-    const raw=Number(submitStorageGet(TEACHER_SUBMIT_LAST_KEY));
-    return Number.isFinite(raw) && raw>0 ? raw : 0;
+    const stored=Number(submitStorageGet(TEACHER_SUBMIT_LAST_KEY));
+    return Math.max(teacherSubmitVolatileLast,Number.isFinite(stored)&&stored>0?stored:0);
   }
-  function teacherSubmitRemainingMs(){
-    return Math.max(0,TEACHER_SUBMIT_COOLDOWN_MS-(Date.now()-lastTeacherSubmitTime()));
+  function teacherSubmitRemainingMs(){return Math.max(0,TEACHER_SUBMIT_COOLDOWN_MS-(Date.now()-lastTeacherSubmitTime()));}
+  function teacherMarkSubmitAttempt(){
+    teacherSubmitVolatileLast=Date.now();
+    submitStorageSet(TEACHER_SUBMIT_LAST_KEY,String(teacherSubmitVolatileLast));
   }
   function setTeacherSubmitStatus(message,kind=""){
     builderSendTeacherStatus.textContent=message;
     builderSendTeacherStatus.classList.remove("ok","warn");
     if(kind)builderSendTeacherStatus.classList.add(kind);
   }
+  function teacherSaveReceipt(){
+    try{sessionStorage.setItem(TEACHER_SUBMIT_RECEIPT_KEY,JSON.stringify(teacherSubmission));teacherSubmitSessionAvailable=true;}
+    catch(err){teacherSubmitSessionAvailable=false;}
+  }
+  function teacherLoadReceipt(){
+    try{
+      const r=JSON.parse(sessionStorage.getItem(TEACHER_SUBMIT_RECEIPT_KEY)||"null");
+      if(!r)return;
+      const p=r.payload;
+      if(r.schema!==1||!p||typeof p.model!=="string"||p.model.length>500000||
+        !/^[A-Za-z0-9_-]{16,100}$/.test(p.submissionId)||!/^[A-Za-z0-9_-]{12,100}$/.test(p.clientId)||
+        !["saved","pending","unknown","unavailable"].includes(r.state)||
+        ![p.studentName,p.studentClass,p.modelName,r.signature].every(v=>typeof v==="string"))return;
+      teacherSubmission=r;
+      teacherSubmitVolatileLast=Number(r.lastAttemptAt)||0;
+    }catch(err){teacherSubmitSessionAvailable=false;}
+  }
   function updateTeacherSubmitUi(){
     const remaining=teacherSubmitRemainingMs();
-
-    if(builderSubmitBusy){
-      builderSendTeacherBtn.disabled=true;
-      builderSendTeacherBtn.textContent="Pošiljam …";
-      return;
-    }
-
-    if(remaining>0){
-      const sec=Math.ceil(remaining/1000);
-      builderSendTeacherBtn.disabled=true;
-      builderSendTeacherBtn.textContent=`Ponovna oddaja čez ${sec} s`;
-      setTeacherSubmitStatus(`Model je bil poslan. Novo oddajo lahko pošlješ čez ${sec} s.`,"ok");
-    }else{
-      builderSendTeacherBtn.disabled=false;
-      builderSendTeacherBtn.textContent="Pošlji učitelju";
-      if(builderSendTeacherStatus.classList.contains("ok")){
-        setTeacherSubmitStatus("Pripravljen za novo oddajo. Največ ena oddaja na 60 sekund.");
-      }
-    }
+    builderSendTeacherBtn.disabled=builderSubmitBusy||remaining>0;
+    builderSendTeacherBtn.textContent=builderSubmitBusy?teacherSubmitPhase:
+      remaining>0?`Nova oddaja čez ${Math.ceil(remaining/1000)} s`:
+      teacherSubmission?"Pošlji trenutno telo kot novo oddajo":"Pošlji učitelju";
+    const check=teacherSubmitEl("builderCheckReceiptBtn"),retry=teacherSubmitEl("builderRetrySubmitBtn"),download=teacherSubmitEl("builderDownloadSubmittedBtn");
+    check.hidden=retry.hidden=download.hidden=!teacherSubmission;
+    check.disabled=retry.disabled=builderSubmitBusy;
+    retry.hidden=!teacherSubmission||teacherSubmission.state==="saved"||teacherSubmission.state==="unavailable";
+    const detail=teacherSubmitEl("builderSubmissionDetail");
+    detail.textContent=teacherSubmission?
+      `Poslana kopija: ${teacherSubmission.payload.modelName} · ${teacherSubmission.payload.studentName} · ${teacherSubmission.payload.studentClass}. Potrdilo velja za to kopijo; poznejše spremembe telesa niso vključene.`:"";
+    if(!teacherSubmitSessionAvailable)detail.textContent+=" Brskalnik ne dovoli obnove potrdila po osvežitvi. Shrani poslano kopijo na računalnik in pusti zavihek odprt do potrditve.";
   }
   function startTeacherSubmitCountdown(){
     if(builderSubmitTimer)clearInterval(builderSubmitTimer);
     updateTeacherSubmitUi();
     builderSubmitTimer=setInterval(()=>{
       updateTeacherSubmitUi();
-      if(!builderSubmitBusy && teacherSubmitRemainingMs()<=0){
-        clearInterval(builderSubmitTimer);
-        builderSubmitTimer=null;
-      }
-    },250);
+      if(!builderSubmitBusy&&teacherSubmitRemainingMs()<=0){clearInterval(builderSubmitTimer);builderSubmitTimer=null;}
+    },500);
   }
-
+  function teacherSavedMessage(){
+    return `✓ Model »${teacherSubmission.payload.modelName}« je shranjen v učiteljevi mapi. Potrdilo velja za poslano kopijo.`;
+  }
+  function teacherUnconfirmedMessage(){
+    return "Prejema še ni mogoče potrditi. Preveri prejem ali ponovi isto oddajo. Če težava ostane, shrani poslano kopijo in obvesti učitelja.";
+  }
+  function teacherReceiptStatus(payload){
+    return new Promise((resolve,reject)=>{
+      const callback="tehnikaReceipt_"+makeSubmitClientId().replace(/-/g,""),script=document.createElement("script");
+      const url=new URL(TEACHER_SUBMIT_URL);
+      url.searchParams.set("action","status");url.searchParams.set("clientId",payload.clientId);
+      url.searchParams.set("submissionId",payload.submissionId);url.searchParams.set("callback",callback);
+      url.searchParams.set("_",String(Date.now()));
+      let settled=false,timer;
+      function finish(value,error){
+        if(settled)return;settled=true;clearTimeout(timer);script.remove();
+        // Po časovni omejitvi se lahko odgovor še vrne. Kratek no-op prepreči
+        // napako in nikoli ne spremeni že zaključenega preverjanja.
+        window[callback]=()=>{};setTimeout(()=>{delete window[callback];},60000);
+        if(error)reject(error);else resolve(value);
+      }
+      window[callback]=value=>{
+        if(!value||typeof value!=="object"||value.version!=="3.0"||typeof value.success!=="boolean"||typeof value.status!=="string"){
+          finish(null,new Error("Neveljavno potrdilo sprejemnika."));return;
+        }
+        finish(value);
+      };
+      script.onerror=()=>finish(null,new Error("Potrdila ni mogoče prebrati."));
+      script.src=url.href;script.async=true;script.referrerPolicy="no-referrer";
+      timer=setTimeout(()=>finish(null,new Error("Čas za preverjanje je potekel.")),TEACHER_SUBMIT_STATUS_TIMEOUT_MS);
+      document.head.appendChild(script);
+    });
+  }
+  async function teacherPollReceipt(record,attempts=3){
+    for(let i=0;i<attempts;i++){
+      if(i)await new Promise(resolve=>setTimeout(resolve,i*2000));
+      try{
+        const answer=await teacherReceiptStatus(record.payload);
+        if(answer.success===true&&answer.status==="saved"){
+          record.state="saved";record.savedAt=answer.savedAt||null;teacherSaveReceipt();
+          setTeacherSubmitStatus(teacherSavedMessage(),"ok");return true;
+        }
+        if(answer.status==="unavailable"){
+          record.state="unavailable";teacherSaveReceipt();
+          setTeacherSubmitStatus("Oddaja je bila shranjena, vendar datoteka v učiteljevi mapi ni več dosegljiva. O tem obvesti učitelja.","warn");return false;
+        }
+      }catch(err){/* Omejeno ponavljamo le preverjanje, nikoli samodejno POST. */}
+    }
+    record.state="unknown";teacherSaveReceipt();setTeacherSubmitStatus(teacherUnconfirmedMessage(),"warn");return false;
+  }
+  async function teacherPostSnapshot(record){
+    const controller=new AbortController();let timeout;
+    try{
+      await Promise.race([
+        fetch(TEACHER_SUBMIT_URL,{
+          method:"POST",mode:"no-cors",cache:"no-store",credentials:"omit",
+          headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(record.payload),signal:controller.signal
+        }),
+        new Promise((_,reject)=>{timeout=setTimeout(()=>{controller.abort();reject(new Error("Čas pošiljanja je potekel."));},TEACHER_SUBMIT_POST_TIMEOUT_MS);})
+      ]);
+    }catch(err){/* Tudi po izgubljenem odgovoru je datoteka lahko shranjena. */}
+    finally{clearTimeout(timeout);}
+  }
+  async function teacherRunSubmission(record,retry=false){
+    if(builderSubmitBusy)return;
+    builderSubmitBusy=true;teacherSubmitPhase=retry?"Preverjam prejem …":"Pošiljam …";updateTeacherSubmitUi();
+    try{
+      if(retry){
+        setTeacherSubmitStatus("Najprej preverjam, ali je poslana kopija že shranjena …");
+        if(await teacherPollReceipt(record,1)||record.state==="unavailable")return;
+      }
+      record.state="pending";record.lastAttemptAt=Date.now();teacherMarkSubmitAttempt();teacherSaveReceipt();
+      teacherSubmitPhase="Pošiljam …";updateTeacherSubmitUi();setTeacherSubmitStatus(`Pošiljam kopijo modela »${record.payload.modelName}« …`);
+      await teacherPostSnapshot(record);
+      teacherSubmitPhase="Preverjam prejem …";updateTeacherSubmitUi();setTeacherSubmitStatus("Preverjam, ali je model shranjen …");
+      await teacherPollReceipt(record);
+    }finally{builderSubmitBusy=false;teacherSubmitPhase="";startTeacherSubmitCountdown();}
+  }
+  async function checkTeacherSubmission(){
+    if(builderSubmitBusy||!teacherSubmission)return;
+    builderSubmitBusy=true;teacherSubmitPhase="Preverjam prejem …";updateTeacherSubmitUi();
+    setTeacherSubmitStatus("Preverjam, ali je poslana kopija shranjena …");
+    try{await teacherPollReceipt(teacherSubmission);}
+    finally{builderSubmitBusy=false;teacherSubmitPhase="";startTeacherSubmitCountdown();}
+  }
+  function retryTeacherSubmission(){if(teacherSubmission)return teacherRunSubmission(teacherSubmission,true);}
+  function downloadTeacherSubmission(){
+    if(!teacherSubmission)return;
+    const url=URL.createObjectURL(new Blob([teacherSubmission.payload.model],{type:"application/json;charset=utf-8"}));
+    const a=document.createElement("a");a.href=url;a.download=safeModelFileName(teacherSubmission.payload.modelName)+"_oddano.tehnikamodel";
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
   async function sendTehnikaModelToTeacher(){
     if(builderSubmitBusy)return;
-    if(teacherSubmitRemainingMs()>0){
-      startTeacherSubmitCountdown();
-      return;
+    const studentName=(builderStudentName.value||"").trim(),studentClass=(builderStudentClass.value||"").trim(),modelName=(builderModelName.value||"").trim();
+    for(const [value,input,message] of [[studentName,builderStudentName,"Vpiši ime in priimek učenca."],[studentClass,builderStudentClass,"Vpiši razred / oddelek."],[modelName,builderModelName,"Vpiši ime modela."]]){
+      if(!value){input.focus();setTeacherSubmitStatus(message,"warn");return;}
     }
-
-    const studentName=(builderStudentName.value || "").trim();
-    const studentClass=(builderStudentClass.value || "").trim();
-    const modelName=(builderModelName.value || "").trim();
-
-    if(!studentName){
-      builderStudentName.focus();
-      setTeacherSubmitStatus("Vpiši ime in priimek učenca.","warn");
-      return;
-    }
-    if(!studentClass){
-      builderStudentClass.focus();
-      setTeacherSubmitStatus("Vpiši razred / oddelek, npr. 8. a.","warn");
-      return;
-    }
-    if(!modelName){
-      builderModelName.focus();
-      setTeacherSubmitStatus("Vpiši ime modela.","warn");
-      return;
-    }
-
-    let data;
     try{
-      data=builderModelToPortableObject();
-    }catch(err){
-      console.error("Napaka pri pripravi modela za oddajo:",err);
-      setTeacherSubmitStatus(`Modela ne morem pripraviti za oddajo. ${err.message}`,"warn");
-      return;
-    }
-
-    if(!Array.isArray(data.cells) || data.cells.length===0){
-      setTeacherSubmitStatus("Model je prazen. Pred oddajo dodaj vsaj en gradnik.","warn");
-      return;
-    }
-
-    const payload={
-      studentName,
-      studentClass,
-      modelName:data.modelName,
-      clientId:teacherSubmitClientId(),
-      model:JSON.stringify(data,null,2)
-    };
-
-    builderSubmitBusy=true;
-    updateTeacherSubmitUi();
-    setTeacherSubmitStatus("Pošiljam model učitelju …");
-
-    try{
-      await fetch(TEACHER_SUBMIT_URL,{
-        method:"POST",
-        mode:"no-cors",
-        cache:"no-store",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body:JSON.stringify(payload)
-      });
-
-      submitStorageSet(TEACHER_SUBMIT_LAST_KEY,String(Date.now()));
-      setTeacherSubmitStatus("✓ Oddaja je bila poslana učitelju. Novo oddajo lahko pošlješ čez 60 s.","ok");
-    }catch(err){
-      console.error("Napaka pri pošiljanju modela učitelju:",err);
-      setTeacherSubmitStatus("Oddaje ni bilo mogoče poslati. Preveri internetno povezavo in poskusi znova.","warn");
-    }finally{
-      builderSubmitBusy=false;
-      startTeacherSubmitCountdown();
-    }
+      const data=builderModelToPortableObject();
+      if(!Array.isArray(data.cells)||!data.cells.length){setTeacherSubmitStatus("Model je prazen. Pred oddajo dodaj gradnik.","warn");return;}
+      const model=JSON.stringify(data,null,2);
+      if(model.length>500000){setTeacherSubmitStatus("Model je prevelik za spletno oddajo. Shrani ga na računalnik.","warn");return;}
+      // savedAt se spremeni ob vsakem izvozu; sam po sebi ni nova vsebina.
+      const comparable={...data};delete comparable.savedAt;
+      const signature=JSON.stringify([studentName,studentClass,modelName,comparable]);
+      if(teacherSubmission&&teacherSubmission.signature===signature){
+        if(teacherSubmission.state==="saved")setTeacherSubmitStatus(teacherSavedMessage(),"ok");
+        else if(teacherSubmission.state==="unavailable")setTeacherSubmitStatus("Prejšnja kopija je bila shranjena, zdaj pa ni dosegljiva. O tem obvesti učitelja.","warn");
+        else await teacherRunSubmission(teacherSubmission,true);
+        return;
+      }
+      if(teacherSubmitRemainingMs()>0){startTeacherSubmitCountdown();return;}
+      if(teacherSubmission&&teacherSubmission.state!=="saved"&&
+        !window.confirm("Prejem prejšnje kopije še ni potrjen. Nova oddaja bo vsebovala trenutno telo in zamenjala prikaz prejšnjega potrdila. Najprej lahko uporabiš »Preveri prejem« ali shraniš poslano kopijo. Želiš oddati trenutno telo kot novo oddajo?"))return;
+      const payload={studentName,studentClass,modelName:data.modelName,clientId:teacherSubmitClientId(),submissionId:makeSubmitClientId(),model};
+      teacherSubmission={schema:1,payload,signature,createdAt:Date.now(),lastAttemptAt:0,state:"pending"};
+      teacherSaveReceipt();await teacherRunSubmission(teacherSubmission);
+    }catch(err){setTeacherSubmitStatus(`Oddaje ne morem pripraviti. ${err.message}`,"warn");}
   }
-
+  function initTeacherSubmission(){
+    teacherLoadReceipt();
+    teacherSubmitEl("builderCheckReceiptBtn").addEventListener("click",checkTeacherSubmission);
+    teacherSubmitEl("builderRetrySubmitBtn").addEventListener("click",retryTeacherSubmission);
+    teacherSubmitEl("builderDownloadSubmittedBtn").addEventListener("click",downloadTeacherSubmission);
+    if(teacherSubmission)setTeacherSubmitStatus(teacherSubmission.state==="saved"?teacherSavedMessage():"Obnovljena je poslana kopija. Preveri prejem; trenutna sestava je lahko drugačna.",teacherSubmission.state==="saved"?"ok":"warn");
+    startTeacherSubmitCountdown();
+  }
 
   function validatePortableModel(data){
     const problems=[];
@@ -5420,7 +5648,12 @@
       throw new Error("Datoteke ne morem prebrati. Vsebina ni veljaven .tehnikamodel.");
     }
 
+    const check=validatePortableModel(data);
+    if(!check.ok)throw new Error(check.problems.slice(0,3).join(" "));
+    if(!confirmBuilderReplacement())return;
     loadPortableModelObject(data);
+    builderDraft.dirty=false;
+    flushBuilderDraft();
   }
 
 
@@ -8411,7 +8644,7 @@
   function builderRenderFrame(){
     builderRenderState.frameId=0;
 
-    if(document.hidden || !builderOverlay.classList.contains("open"))return;
+    if(document.hidden || !builderOverlay.classList.contains("open") || !document.getElementById("dmExerciseOverlay").hidden)return;
 
     let cameraStillMoving=false;
 
@@ -8825,28 +9058,117 @@
   }
   function dmOrientation(meta,top,front,reference='front'){
     const z=meta.directions[top],y=meta.directions[front];if(!z||!y||dot(z,y)!==0)throw new Error('Zgornja in sprednja stran morata biti sosednji.');
+    if(reference==='front-left')return [y.slice(),z.slice(),cross(y,z)];
     return reference==='left'?[y.slice(),cross(z,y),z.slice()]:[cross(y,z),y.slice(),z.slice()];
   }
   function dmIsoPoint(p){return [(p[1]-p[0])*Math.sqrt(3)/2,(p[0]+p[1])*.5-p[2]];}
-  function dmIsoVisibleSegments(edges,faces){
-    const projected=faces.flatMap(f=>canonicalFanTriangles(f)).map(tri=>({tri,pts:tri.map(dmIsoPoint)})),segments=[];
-    function visible(point,depth){
-      for(const f of projected){const [a,b,c]=f.pts,den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(den)<1e-9)continue;
-        const u=((b[1]-c[1])*(point[0]-c[0])+(c[0]-b[0])*(point[1]-c[1]))/den,v=((c[1]-a[1])*(point[0]-c[0])+(a[0]-c[0])*(point[1]-c[1]))/den;
-        if(u<-1e-7||v<-1e-7||u+v>1+1e-7)continue;
-        const d=u*f.tri[0].reduce((s,x)=>s+x,0)+v*f.tri[1].reduce((s,x)=>s+x,0)+(1-u-v)*f.tri[2].reduce((s,x)=>s+x,0);
-        if(d>depth+1e-6)return false;
-      }return true;
-    }
-    for(const edge of edges){const [a,b]=[edge.a,edge.b],A=dmIsoPoint(a),B=dmIsoPoint(b),D=[B[0]-A[0],B[1]-A[1]],ts=[0,1];
-      for(const face of projected)for(let i=0;i<3;i++){const P=face.pts[i],Q=face.pts[(i+1)%3],E=[Q[0]-P[0],Q[1]-P[1]],den=D[0]*E[1]-D[1]*E[0];if(Math.abs(den)<1e-9)continue;
-        const V=[P[0]-A[0],P[1]-A[1]],t=(V[0]*E[1]-V[1]*E[0])/den,u=(V[0]*D[1]-V[1]*D[0])/den;if(t>1e-8&&t<1-1e-8&&u>=-1e-8&&u<=1+1e-8)ts.push(t);}
-      ts.sort((x,y)=>x-y);const unique=ts.filter((t,i)=>!i||t-ts[i-1]>1e-7);let start=null,end=null;
-      for(let i=0;i<unique.length-1;i++){const lo=unique[i],hi=unique[i+1],t=(lo+hi)/2,p=a.map((v,k)=>v+(b[k]-v)*t),yes=visible(dmIsoPoint(p),p.reduce((s,x)=>s+x,0));
-        if(yes){if(start===null)start=lo;end=hi;}else if(start!==null){segments.push([A.map((v,k)=>v+D[k]*start),A.map((v,k)=>v+D[k]*end)]);start=null;}}
-      if(start!==null)segments.push([A.map((v,k)=>v+D[k]*start),A.map((v,k)=>v+D[k]*end)]);
-    }return segments;
+  // Work on the actual union surface, including partial full/cut-cell joins.
+  // Otherwise internal cell faces can reappear as dashed technical edges.
+  function dmCleanSolidGeometry(cells,transform){
+    const pieces=[];
+    cells.forEach((cell,key)=>{
+      const raw=primitiveFaces(...key.split(',').map(Number),cell).map(f=>f.map(p=>transform(p).map(v=>v*5)));
+      const inside=primitiveInteriorPoint(raw);
+      pieces.push(vkPiece(raw.map(f=>orientFaceOutward(f,inside))));
+    });
+    const faces=vkUnionFaces(pieces).map(f=>f.map(p=>p.map(v=>v/5)));
+    return {faces,edges:dmSurfaceFeatureEdges(faces)};
   }
+  function dmSurfaceFeatureEdges(faces){
+    const groups=new Map(),eps=1e-7;
+    for(const face of faces){
+      const normal=faceNormal(face);
+      for(let i=0;i<face.length;i++){
+        const a=face[i],b=face[(i+1)%face.length],delta=vSub(b,a),length=Math.hypot(...delta);
+        if(length<eps)continue;
+        let dir=delta.map(v=>v/length);
+        if(dir.find(v=>Math.abs(v)>eps)<0)dir=dir.map(v=>-v);
+        const origin=vSub(a,vMul(dir,dot(a,dir))),key=[...dir,...origin].map(v=>Math.round(v*1e6)).join(',');
+        if(!groups.has(key))groups.set(key,{dir,origin,intervals:[]});
+        const ts=[dot(a,dir),dot(b,dir)].sort((x,y)=>x-y);
+        groups.get(key).intervals.push({lo:ts[0],hi:ts[1],normal});
+      }
+    }
+    const edges=[];
+    for(const g of groups.values()){
+      const ts=g.intervals.flatMap(e=>[e.lo,e.hi]).sort((a,b)=>a-b).filter((v,i,a)=>!i||v-a[i-1]>eps);
+      let start=null,end=null;
+      function flush(){if(start!==null)edges.push({a:vAdd(g.origin,vMul(g.dir,start)),b:vAdd(g.origin,vMul(g.dir,end))});start=null;}
+      for(let i=0;i<ts.length-1;i++){
+        const mid=(ts[i]+ts[i+1])/2,ns=g.intervals.filter(e=>mid>e.lo-eps&&mid<e.hi+eps).map(e=>e.normal);
+        const feature=ns.length===1||ns.some(n=>ns.some(m=>Math.abs(dot(n,m))<1-eps));
+        if(feature){if(start===null)start=ts[i];end=ts[i+1];}else flush();
+      }
+      flush();
+    }
+    return edges;
+  }
+  function dmIsoSegments(edges,faces){
+    const eps=1e-8,depthEps=1e-7;
+    const triangles=faces.flatMap(canonicalFanTriangles).map(tri=>{
+      const pts=tri.map(dmIsoPoint),[a,b,c]=pts,den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);
+      return {pts,depth:tri.map(p=>p[0]+p[1]+p[2]),den};
+    }).filter(f=>Math.abs(f.den)>eps);
+    const result={visible:[],hidden:[]};
+    const at=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+    function merge(intervals){
+      const out=[];
+      for(const span of intervals.sort((a,b)=>a[0]-b[0])){
+        const last=out[out.length-1];
+        if(last&&span[0]<=last[1]+eps)last[1]=Math.max(last[1],span[1]);else out.push(span.slice());
+      }
+      return out;
+    }
+    for(const edge of edges){
+      const A=dmIsoPoint(edge.a),B=dmIsoPoint(edge.b);
+      if(Math.hypot(B[0]-A[0],B[1]-A[1])<eps)continue;
+      const depths=[edge.a,edge.b].map(p=>p[0]+p[1]+p[2]),covered=[];
+      for(const f of triangles){
+        const [a,b,c]=f.pts;
+        function weights(p){const u=((b[1]-c[1])*(p[0]-c[0])+(c[0]-b[0])*(p[1]-c[1]))/f.den,v=((c[1]-a[1])*(p[0]-c[0])+(a[0]-c[0])*(p[1]-c[1]))/f.den;return [u,v,1-u-v];}
+        const w0=weights(A),w1=weights(B);let lo=0,hi=1,valid=true;
+        // Each barycentric coordinate and the depth difference are affine in t.
+        // Clip the entire interval, including visibility changes on slopes.
+        function clip(d0,d1){
+          if(!valid)return;
+          const slope=d1-d0;
+          if(Math.abs(slope)<eps){if(d0<0)valid=false;return;}
+          const t=-d0/slope;
+          if(slope>0)lo=Math.max(lo,t);else hi=Math.min(hi,t);
+          if(hi-lo<=eps)valid=false;
+        }
+        for(let k=0;k<3;k++)clip(w0[k]+eps,w1[k]+eps);
+        clip(w0.reduce((s,v,k)=>s+v*f.depth[k],0)-depths[0]-depthEps,w1.reduce((s,v,k)=>s+v*f.depth[k],0)-depths[1]-depthEps);
+        if(valid&&hi-lo>eps)covered.push([Math.max(0,lo),Math.min(1,hi)]);
+      }
+      let cursor=0;
+      for(const [lo,hi] of merge(covered)){
+        if(lo-cursor>eps)result.visible.push([at(A,B,cursor),at(A,B,lo)]);
+        result.hidden.push([at(A,B,lo),at(A,B,hi)]);cursor=hi;
+      }
+      if(1-cursor>eps)result.visible.push([at(A,B,cursor),B]);
+    }
+    // Join projected collinear intervals. A visible edge always takes precedence
+    // over an exactly superimposed hidden one, even when their lengths differ.
+    const groups=new Map();
+    for(const kind of ['visible','hidden'])for(const [a,b] of result[kind]){
+      const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);
+      if(length<1e-6)continue;
+      let dir=[dx/length,dy/length];if(dir.find(v=>Math.abs(v)>eps)<0)dir=dir.map(v=>-v);
+      const offset=-dir[1]*a[0]+dir[0]*a[1],key=[...dir,offset].map(v=>Math.round(v*1e6)).join(',');
+      if(!groups.has(key))groups.set(key,{dir,offset,visible:[],hidden:[]});
+      const ts=[a,b].map(p=>p[0]*dir[0]+p[1]*dir[1]).sort((x,y)=>x-y);groups.get(key)[kind].push(ts);
+    }
+    const out={visible:[],hidden:[]};
+    for(const g of groups.values()){
+      const vis=merge(g.visible),hid=merge(g.hidden),point=t=>[g.dir[0]*t-g.dir[1]*g.offset,g.dir[1]*t+g.dir[0]*g.offset];
+      for(const span of vis)out.visible.push(span.map(point));
+      for(const span of hid){let parts=[span];for(const v of vis){const next=[];for(const p of parts){if(v[1]<=p[0]+eps||v[0]>=p[1]-eps)next.push(p);else{if(v[0]>p[0]+eps)next.push([p[0],v[0]]);if(v[1]<p[1]-eps)next.push([v[1],p[1]]);}}parts=next;}for(const p of parts)out.hidden.push(p.map(point));}
+    }
+    for(const kind of ['visible','hidden'])out[kind]=out[kind].filter(([a,b])=>Math.hypot(b[0]-a[0],b[1]-a[1])>=1e-6);
+    return out;
+  }
+  function dmIsoVisibleSegments(edges,faces){return dmIsoSegments(edges,faces).visible;}
   function dmSvgNode(name,attrs,parent){const node=document.createElementNS('http://www.w3.org/2000/svg',name);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,v);if(parent)parent.appendChild(node);return node;}
   function dmSvgText(parent,x,y,text,size=14){const n=dmSvgNode('text',{x,y,'font-size':size,'font-family':'system-ui,sans-serif',fill:'#284555'},parent);n.textContent=text;return n;}
   // One model coordinate is one 5 mm cube edge. Grid uses the same
@@ -8870,10 +9192,10 @@
       else{line([origin[0]+k*scale,origin[1]],[0,1]);line([origin[0],origin[1]+k*scale],[1,0]);}
     }
   }
-  function dmRenderIso(svg,geometry){
+  function dmRenderIso(svg,geometry,hidden=true){
     svg.replaceChildren();svg.setAttribute('viewBox','0 0 700 540');
     const faces=geometry.faces.map(f=>({pts:f,depth:faceCentroid3(f).reduce((s,v)=>s+v,0)})),pts=faces.flatMap(f=>f.pts.map(dmIsoPoint));
-    const bounds=geometry.bounds,O=[bounds.min[0]-1,bounds.min[1]-1,bounds.min[2]],ends=[[bounds.max[0]+1,O[1],O[2]],[O[0],bounds.max[1]+1,O[2]],[O[0],O[1],bounds.max[2]+1]];
+    const bounds=geometry.bounds,O=bounds.min.slice(),ends=[[bounds.max[0]+1,O[1],O[2]],[O[0],bounds.max[1]+1,O[2]],[O[0],O[1],bounds.max[2]+1]];
     const frame=[...pts,dmIsoPoint(O),...ends.map(dmIsoPoint)],lo=[0,1].map(a=>Math.min(...frame.map(p=>p[a]))),hi=[0,1].map(a=>Math.max(...frame.map(p=>p[a]))),scale=Math.min(590/Math.max(1,hi[0]-lo[0]),410/Math.max(1,hi[1]-lo[1]));
     const map=p=>[350+(p[0]-(lo[0]+hi[0])/2)*scale,280+(p[1]-(lo[1]+hi[1])/2)*scale];
     dmDrawSolutionGrid(svg,[22,45,678,518],map(dmIsoPoint(O)),scale,true);
@@ -8881,8 +9203,9 @@
     ends.forEach((end,i)=>{const q=map(dmIsoPoint(end));dmSvgNode('line',{x1:origin[0],y1:origin[1],x2:q[0],y2:q[1],stroke:'#52646d','stroke-width':1.8},axes);dmSvgText(axes,q[0]+(i===0?-14:7),q[1]+(i===2?-8:16),['x','y','z'][i],15);});
     faces.sort((a,b)=>a.depth-b.depth);
     for(const f of faces){const n=faceNormal(f.pts);dmSvgNode('polygon',{points:f.pts.map(p=>map(dmIsoPoint(p)).join(',')).join(' '),fill:n[2]>.5?'#f5f8fa':Math.abs(n[0])>.5?'#d9e5eb':'#e6edf1',stroke:'none'},svg);}
-    const segments=dmIsoVisibleSegments(geometry.edges,geometry.faces);
-    for(const [a,b] of segments){const A=map(a),B=map(b);dmSvgNode('line',{x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:'#1f3542','stroke-width':1.8,'stroke-linecap':'round'},svg);}
+    const segments=dmIsoSegments(geometry.edges,geometry.faces);
+    if(hidden)for(const [a,b] of segments.hidden){const A=map(a),B=map(b);dmSvgNode('line',{x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:'#617784','stroke-width':1.1,'stroke-dasharray':'6 4','data-edge-kind':'hidden'},svg);}
+    for(const [a,b] of segments.visible){const A=map(a),B=map(b);dmSvgNode('line',{x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:'#1f3542','stroke-width':1.8,'stroke-linecap':'round','data-edge-kind':'visible'},svg);}
     dmSvgText(svg,22,28,'IZOMETRIČNA RISBA',15);dmSvgText(svg,475,28,'Korak mreže = 5 mm',13);
   }
   function dmRenderOrthographic(svg,geometry,hidden){
@@ -8903,53 +9226,156 @@
     dmSvgText(axes,26,oy-8,'x',15);dmSvgText(axes,ox+8,52,'z',15);dmSvgText(axes,762,oy-8,'y',15);dmSvgText(axes,ox+8,588,'y',15);
     dmSvgText(svg,22,22,'Korak mreže = 5 mm',13);
   }
-  const dmExercise={models:new Map(),selected:null,revealed:false,geometry:null};
-  function dmModelGeometry(data,rotation){return dmWithGeometry(data,rotation,()=>({faces:orientedBuilderFaces().map(f=>f.pts),edges:builderFeatureEdges3DOriented().map(e=>({a:e.a,b:e.b})),bounds:builderTransformedBounds(),projections:Object.fromEntries(['front','top','side'].map(v=>[v,builderOrientedProjectionGeometry(v)]))}));}
+  const dmExercise={models:new Map(),webModels:new Map(),localModels:new Map(),selected:null,revealed:false,geometry:null,loading:false,printed:new Set(),pendingCode:null};
+  const DM_PRINTED_KEY='tehnika8.printedModels.v1';
+  function dmModelFingerprint(data){
+    const cells=data.cells.map(c=>[c.x,c.y,c.z,c.type,c.cutPlane||'',c.cutTri??'',c.cutDir||'']).sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
+    const text=JSON.stringify([data.didactic.id,data.didactic.printCode,DM_LETTERS.map(l=>data.didactic.directions[l]),cells]);
+    let hash=2166136261;for(let i=0;i<text.length;i++){hash^=text.charCodeAt(i);hash=Math.imul(hash,16777619);}return (hash>>>0).toString(16).padStart(8,'0');
+  }
+  function dmPhysicalKey(data){return data.didactic.id+'@'+dmModelFingerprint(data);}
+  function dmDifficulty(data){return /^DM_L/i.test(data.didactic.id)?'easy':'advanced';}
+  function dmModelLabel(data){return 'Model '+data.didactic.printCode+' · '+data.didactic.id+' · '+(data.modelName||'');}
+  function dmPreparedModel(data){
+    const check=validatePortableModel(data);if(!check.ok)throw new Error(check.problems.join(' '));
+    if(!data.didactic)throw new Error('Model nima oznak A-F. Pripravi jih v načinu DIDAKTIČNI MODEL.');
+    if(!data.gridSize.every(n=>n===10)||data.cellSizeMm!==5)throw new Error('Didaktični model potrebuje mrežo 10 × 10 × 10 in 5 mm kocke.');
+    if(!data.cells.length)throw new Error('Model je prazen.');
+    const copy=dmClone(data);for(const c of copy.cells)if(c.type==='cut'&&!c.cutPlane){const spec=legacyCutDirToSpec(c.cutDir);c.cutPlane=spec.plane;c.cutTri=spec.tri;}
+    return copy;
+  }
+  function dmRebuildModels(preferredKey=null){
+    const select=dmEl('dmModelSelect'),previousKey=select.value,oldData=dmExercise.selected,oldHash=oldData&&dmModelFingerprint(oldData),wasRevealed=dmExercise.revealed;
+    const next=new Map();for(const [id,data] of dmExercise.webModels)next.set('web:'+id,data);for(const [key,data] of dmExercise.localModels)next.set('local:'+key,data);
+    dmExercise.models=next;select.replaceChildren();
+    const entries=[...next].sort((a,b)=>dmModelLabel(a[1]).localeCompare(dmModelLabel(b[1]),'sl',{numeric:true}));
+    for(const [key,data] of entries){
+      const conflict=entries.some(([other,d])=>other!==key&&d.didactic.id===data.didactic.id&&dmModelFingerprint(d)!==dmModelFingerprint(data));
+      const suffix=key.startsWith('local:')?' · lokalno':'';
+      select.add(new Option(dmModelLabel(data)+suffix+(conflict?' · različica '+dmModelFingerprint(data):''),key));
+    }
+    const target=preferredKey&&next.has(preferredKey)?preferredKey:next.has(previousKey)?previousKey:(entries[0]?.[0]||'');select.value=target;
+    dmExerciseRefresh();dmRenderPrintedList();
+    if(wasRevealed&&target===previousKey&&oldHash===dmModelFingerprint(next.get(target)))dmShowAnswer();
+    if(dmExercise.pendingCode){const code=dmExercise.pendingCode;dmExercise.pendingCode=null;dmApplyTaskCode(code);}
+  }
+  function dmCurrentOrientation(){
+    const data=dmExercise.selected;if(!data)throw new Error('Najprej izberi model.');
+    return dmOrientation(data.didactic,dmEl('dmTop').value,dmEl('dmFront').value,dmEl('dmReference').value);
+  }
+  function dmCurrentTaskText(){
+    const data=dmExercise.selected;if(!data)return 'Izberi ali naloži didaktični model.';
+    const first=dmEl('dmTop').value,second=dmEl('dmFront').value,reference=dmEl('dmReference').value;
+    const orientation=reference==='front-left'?`${first} spredaj, ${second} levo`:`${first} zgoraj, ${second} ${reference==='left'?'levo':'spredaj'}`;
+    return `${dmModelLabel(data)}. ${orientation}. Nariši ${{both:'izometrično risbo in pravokotne projekcije',iso:'izometrično risbo',ortho:'pravokotne projekcije'}[dmEl('dmDrawingKind').value]}.`;
+  }
+  function dmTaskCode(){
+    const data=dmExercise.selected;if(!data)return '';
+    return ['T8',data.didactic.id,dmModelFingerprint(data),{front:'ZF',left:'ZL','front-left':'FL'}[dmEl('dmReference').value],dmEl('dmTop').value,dmEl('dmFront').value,dmEl('dmDrawingKind').value].join(':');
+  }
   function dmExerciseRefresh(){
     const data=dmExercise.models.get(dmEl('dmModelSelect').value);dmExercise.selected=data||null;
-    dmEl('dmFrontLabel').textContent=dmEl('dmReference').value==='left'?'Levo':'Spredaj';
-    const top=dmEl('dmTop'),front=dmEl('dmFront'),oldTop=top.value||'A',oldFront=front.value||'B';
-    top.replaceChildren(...DM_LETTERS.map(l=>new Option(l,l)));top.value=oldTop;
-    front.replaceChildren();if(data)for(const l of DM_LETTERS)if(dot(data.didactic.directions[top.value],data.didactic.directions[l])===0)front.add(new Option(l,l));
-    front.value=[...front.options].some(o=>o.value===oldFront)?oldFront:(front.options[0]?.value||'');dmExercise.revealed=false;dmExercise.geometry=null;dmEl('dmAnswer').hidden=true;
-    dmEl('dmShowAnswer').disabled=!data;dmEl('dmExerciseTask').textContent=data?`${data.didactic.id} · ${data.modelName} — ${top.value} zgoraj, ${front.value} ${dmEl('dmReference').value==='left'?'levo':'spredaj'}. Nariši ${ {both:'izometrično risbo in pravokotne projekcije',iso:'izometrično risbo',ortho:'pravokotne projekcije'}[dmEl('dmDrawingKind').value]}.`:'Izberi ali naloži didaktični model.';
+    const ref=dmEl('dmReference').value;dmEl('dmTopLabel').textContent=ref==='front-left'?'Spredaj':'Zgoraj';dmEl('dmFrontLabel').textContent=ref==='front'?'Spredaj':'Levo';
+    const first=dmEl('dmTop'),second=dmEl('dmFront'),oldFirst=first.value||'A',oldSecond=second.value||'B';
+    first.replaceChildren(...DM_LETTERS.map(l=>new Option(l,l)));first.value=DM_LETTERS.includes(oldFirst)?oldFirst:'A';
+    second.replaceChildren();if(data)for(const l of DM_LETTERS)if(dot(data.didactic.directions[first.value],data.didactic.directions[l])===0)second.add(new Option(l,l));
+    second.value=[...second.options].some(o=>o.value===oldSecond)?oldSecond:(second.options[0]?.value||'');
+    dmExercise.revealed=false;dmExercise.geometry=null;dmEl('dmAnswer').hidden=true;
+    for(const id of ['dmShowAnswer','dmPrintTask','dmPrintSolution','dmCopyTask'])dmEl(id).disabled=!data;
+    dmEl('dmExerciseTask').textContent=dmCurrentTaskText();dmEl('dmTaskCode').value=dmTaskCode();
   }
   function dmShowAnswer(){
     const data=dmExercise.selected;if(!data)return;
     try{
-      const R=dmOrientation(data.didactic,dmEl('dmTop').value,dmEl('dmFront').value,dmEl('dmReference').value),front=DM_LETTERS.find(l=>dot(data.didactic.directions[l],R[1])===1),left=DM_LETTERS.find(l=>dot(data.didactic.directions[l],R[0])===1),kind=dmEl('dmDrawingKind').value;
-      dmExercise.geometry=dmModelGeometry(data,R);dmExercise.revealed=true;dmEl('dmAnswer').hidden=false;
+      const R=dmCurrentOrientation(),name=a=>DM_LETTERS.find(l=>dot(data.didactic.directions[l],R[a])===1),kind=dmEl('dmDrawingKind').value;
+      dmExercise.geometry=dmModelGeometry(data,R);
+      dmRenderIso(dmEl('dmIsoSvg'),dmExercise.geometry,dmEl('dmIsoHiddenEdges').checked);
+      dmRenderOrthographic(dmEl('dmOrthoSvg'),dmExercise.geometry,dmEl('dmHiddenEdges').checked);
+      dmExercise.revealed=true;dmEl('dmAnswer').hidden=false;
       dmEl('dmIsoCard').hidden=kind==='ortho';dmEl('dmOrthoCard').hidden=kind==='iso';
-      dmEl('dmAnswerCaption').textContent=`Zgoraj ${dmEl('dmTop').value} · spredaj ${front} · levo ${left}. Risba prikazuje osnovno telo; gravur in utorov ne prerisujemo.`;
-      dmRenderIso(dmEl('dmIsoSvg'),dmExercise.geometry);dmRenderOrthographic(dmEl('dmOrthoSvg'),dmExercise.geometry,dmEl('dmHiddenEdges').checked);
-    }catch(err){dmEl('dmExerciseStatus').textContent=err.message;}
+      dmEl('dmAnswerCaption').textContent=`Model ${data.didactic.printCode} · zgoraj ${name(2)} · spredaj ${name(1)} · levo ${name(0)}. Gravur in utorov ne prerisujemo.`;
+    }catch(err){dmExercise.revealed=false;dmEl('dmAnswer').hidden=true;dmEl('dmExerciseStatus').textContent='Rešitve ni mogoče izrisati: '+err.message;}
   }
-  function dmAcceptModel(data,source='Naloženi model'){
-    const check=validatePortableModel(data);if(!check.ok)throw new Error(check.problems.join(' '));
-    if(!data.didactic)throw new Error('Model nima oznak A–F. Odpri ga v sestavljalniku, izberi DIDAKTIČNI MODEL in pripravi oznake.');
-    if(data.gridSize[0]!==10||data.cellSizeMm!==5)throw new Error('Didaktični model potrebuje mrežo 10 × 10 × 10 in 5 mm kocke.');
-    if(data.cells.length===0)throw new Error('Model je prazen.');
-    const frozen=dmClone(data);for(const c of frozen.cells)if(c.type==='cut'&&!c.cutPlane){const spec=legacyCutDirToSpec(c.cutDir);c.cutPlane=spec.plane;c.cutTri=spec.tri;}dmExercise.models.set(data.didactic.id,frozen);
-    const select=dmEl('dmModelSelect'),old=[...select.options].find(o=>o.value===data.didactic.id);if(old)old.textContent=data.didactic.id+' · '+data.modelName;else select.add(new Option(data.didactic.id+' · '+data.modelName,data.didactic.id));
-    select.value=data.didactic.id;dmEl('dmExerciseStatus').textContent=source;dmExerciseRefresh();
+  function dmAcceptModel(data,source='Naloženi model',rebuild=true){
+    const prepared=dmPreparedModel(data),key=dmPhysicalKey(prepared);
+    dmExercise.localModels.set(key,prepared);
+    if(rebuild)dmRebuildModels('local:'+key);
+    dmEl('dmExerciseStatus').textContent=source;
+    return 'local:'+key;
+  }
+  async function dmFetchJson(url){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try{const response=await fetch(url,{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error('Datoteka ni dosegljiva (HTTP '+response.status+').');return await response.json();}
+    catch(err){if(err.name==='AbortError')throw new Error('Nalaganje je trajalo predolgo. Poskusi znova.');throw err;}
+    finally{clearTimeout(timer);}
   }
   async function dmLoadCollection(){
-    if(location.protocol==='file:'){dmEl('dmExerciseStatus').textContent='Lokalen HTML: modele naloži z gumbom »Naloži modele«. Spletna zbirka se naloži ob objavi strani.';return;}
-    dmEl('dmExerciseStatus').textContent='Nalagam zbirko …';
+    if(dmExercise.loading)return;
+    if(location.protocol==='file:'){dmEl('dmExerciseStatus').textContent='Lokalen HTML: modele naloži z gumbom »Naloži modele«. Spletna zbirka se naloži na objavljeni strani.';return;}
+    dmExercise.loading=true;dmEl('dmReloadCollection').disabled=true;dmEl('dmExerciseStatus').textContent='Nalagam zbirko …';
     try{
-      const root=new URL('./didakticni_modeli/',location.href),r=await fetch(new URL('modeli.json',root),{cache:'no-store'});if(!r.ok)throw new Error('Seznam zbirke ni na voljo. Modele lahko naložiš ročno.');
-      const manifest=await r.json();if(manifest.schema!==1||!Array.isArray(manifest.models)||manifest.models.length>200)throw new Error('Seznam zbirke ni veljaven.');
-      const errors=[];let count=0;const seen=new Set();
-      for(const item of manifest.models){try{
-        if(!item||typeof item.file!=='string'||!/^DM[A-Z0-9_-]{1,20}$/.test(item.id||'')||seen.has(item.id))throw new Error('Neveljavna ali podvojena oznaka v seznamu.');seen.add(item.id);
+      const root=new URL('./didakticni_modeli/',location.href),manifest=await dmFetchJson(new URL('modeli.json',root));
+      if(manifest.schema!==1||!Array.isArray(manifest.models)||manifest.models.length>200)throw new Error('Seznam zbirke ni veljaven.');
+      const seen=new Set(),items=manifest.models.map(item=>{
+        if(!item||typeof item.file!=='string'||!/^DM[A-Z0-9_-]{1,20}$/.test(item.id||'')||seen.has(item.id))throw new Error('Seznam vsebuje neveljavno ali podvojeno oznako.');seen.add(item.id);
         const url=new URL(item.file,root);if(url.origin!==root.origin||!url.pathname.startsWith(root.pathname)||url.search||url.hash||!url.pathname.endsWith('.tehnikamodel'))throw new Error('Datoteka mora biti v mapi didakticni_modeli.');
-        const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('Datoteka ni dosegljiva.');const data=await response.json();if(data.didactic?.id!==item.id)throw new Error('Oznaka v datoteki se ne ujema s seznamom.');dmAcceptModel(data);count++;
-      }catch(e){errors.push((item?.id||'?')+': '+e.message);}}
-      dmEl('dmExerciseStatus').textContent=`Zbirka: ${count} modelov.`+(errors.length?' '+errors.join(' '):count?'':' Dodaj svoje modele z gumbom »Naloži modele«.');
-    }catch(err){dmEl('dmExerciseStatus').textContent=err.message;}
+        return {id:item.id,url};
+      });
+      const next=new Map(),errors=[];let cursor=0,finished=0;
+      async function worker(){while(cursor<items.length){const item=items[cursor++];try{const data=await dmFetchJson(item.url);if(data.didactic?.id!==item.id)throw new Error('Oznaka v datoteki se ne ujema s seznamom.');next.set(item.id,dmPreparedModel(data));}catch(err){errors.push(item.id+': '+err.message);}finished++;dmEl('dmExerciseStatus').textContent=`Nalagam zbirko: ${finished}/${items.length} …`;}}
+      await Promise.all(Array.from({length:Math.min(4,items.length)},worker));
+      if(items.length&&next.size===0)throw new Error('Nobenega modela ni bilo mogoče naložiti. Prejšnja zbirka je ohranjena. '+errors.join(' '));
+      dmExercise.webModels=next;dmRebuildModels();
+      dmEl('dmExerciseStatus').textContent=`Spletna zbirka: ${next.size} modelov.`+(errors.length?' Nedosegljivi modeli niso vključeni: '+errors.join(' '):'');
+    }catch(err){dmEl('dmExerciseStatus').textContent='Osveževanje ni uspelo. Prejšnja zbirka je ohranjena. '+err.message;}
+    finally{dmExercise.loading=false;dmEl('dmReloadCollection').disabled=false;}
+  }
+  function dmSavePrinted(){
+    try{localStorage.setItem(DM_PRINTED_KEY,JSON.stringify([...dmExercise.printed]));}
+    catch(_){dmEl('dmExerciseStatus').textContent='Izbira natisnjenih modelov velja za to odprto stran; brskalnik je ni mogel trajno shraniti.';}
+    dmUpdatePrintedCount();
+  }
+  function dmUniqueModels(){const seen=new Set();return [...dmExercise.models].filter(([key,data])=>{const id=dmPhysicalKey(data);if(seen.has(id))return false;seen.add(id);return true;});}
+  function dmUpdatePrintedCount(){const all=dmUniqueModels();dmEl('dmPrintedCount').textContent=`Izbranih ${all.filter(([,d])=>dmExercise.printed.has(dmPhysicalKey(d))).length} od ${all.length} naloženih modelov` ;}
+  function dmRenderPrintedList(){
+    const list=dmEl('dmPrintedList');list.replaceChildren();
+    for(const [key,data] of dmUniqueModels().sort((a,b)=>dmModelLabel(a[1]).localeCompare(dmModelLabel(b[1]),'sl',{numeric:true}))){
+      const label=document.createElement('label'),box=document.createElement('input'),text=document.createElement('span');box.type='checkbox';box.checked=dmExercise.printed.has(dmPhysicalKey(data));
+      text.textContent=dmModelLabel(data)+' · '+(dmDifficulty(data)==='easy'?'lažji':'zahtevnejši');label.append(box,text);list.appendChild(label);
+      box.addEventListener('change',()=>{const id=dmPhysicalKey(data);if(box.checked)dmExercise.printed.add(id);else dmExercise.printed.delete(id);dmSavePrinted();});
+    }dmUpdatePrintedCount();
+  }
+  function dmRandomIndex(length){
+    if(window.crypto?.getRandomValues){const n=new Uint32Array(1),limit=Math.floor(4294967296/length)*length;do{window.crypto.getRandomValues(n);}while(n[0]>=limit);return n[0]%length;}
+    return Math.floor(Math.random()*length);
+  }
+  function dmRandomTask(){
+    const level=dmEl('dmDifficulty').value,onlyPrinted=dmEl('dmOnlyPrinted').checked;
+    const eligible=dmUniqueModels().filter(([,data])=>(level==='all'||dmDifficulty(data)===level)&&(!onlyPrinted||dmExercise.printed.has(dmPhysicalKey(data))));
+    if(!eligible.length){dmEl('dmExerciseStatus').textContent=onlyPrinted?'Za ta izbor še nimaš označenih natisnjenih modelov. Odpri »Moji natisnjeni modeli« in jih izberi.':'Za izbrano težavnost ni naloženih modelov.';return;}
+    const [key,data]=eligible[dmRandomIndex(eligible.length)];dmEl('dmModelSelect').value=key;
+    dmEl('dmTop').value=DM_LETTERS[dmRandomIndex(6)];dmExerciseRefresh();
+    const options=[...dmEl('dmFront').options];dmEl('dmFront').value=options[dmRandomIndex(options.length)].value;dmExerciseRefresh();dmEl('dmExerciseStatus').textContent='Nova naloga je pripravljena. Kodo lahko shraniš za poznejšo ponovitev.';
+  }
+  function dmApplyTaskCode(code){
+    const parts=String(code||'').trim().split(':'),[schema,id,hash,mode,first,second,kind]=parts;
+    const refs={ZF:'front',ZL:'left',FL:'front-left'};
+    if(parts.length!==7||schema!=='T8'||!/^DM[A-Z0-9_-]{1,20}$/.test(id)||!/^[0-9a-f]{8}$/.test(hash)||!refs[mode]||!DM_LETTERS.includes(first)||!DM_LETTERS.includes(second)||!['both','iso','ortho'].includes(kind)){
+      dmEl('dmExerciseStatus').textContent='Koda naloge ni veljavna.';return false;
+    }
+    const matches=[...dmExercise.models].filter(([,d])=>d.didactic.id===id&&dmModelFingerprint(d)===hash),match=matches.find(([k])=>k===dmEl('dmModelSelect').value)||matches[0];
+    if(!match){dmEl('dmExerciseStatus').textContent='Za to nalogo manjka ustrezna različica modela '+id+'. Osveži zbirko ali naloži izvirno datoteko .tehnikamodel.';return false;}
+    const [key,data]=match;
+    if(dot(data.didactic.directions[first],data.didactic.directions[second])!==0){dmEl('dmExerciseStatus').textContent='Strani v kodi naloge nista sosednji.';return false;}
+    dmEl('dmModelSelect').value=key;dmEl('dmReference').value=refs[mode];dmEl('dmTop').value=first;dmEl('dmDrawingKind').value=kind;dmExerciseRefresh();dmEl('dmFront').value=second;dmExerciseRefresh();dmEl('dmExerciseStatus').textContent='Naloga je obnovljena iz kode.';return true;
+  }
+  async function dmCopyTask(){
+    const code=dmTaskCode();if(!code)return;
+    try{await navigator.clipboard.writeText(code);dmEl('dmExerciseStatus').textContent='Koda naloge je kopirana.';}
+    catch(_){dmEl('dmTaskCode').focus();dmEl('dmTaskCode').select();dmEl('dmExerciseStatus').textContent='Koda je označena. Kopiraj jo s Ctrl+C.';}
   }
   let dmReturnFocus=null;
-  function dmCloseExercise(){dmEl('dmExerciseOverlay').hidden=true;dmReturnFocus?.focus();}
+  function dmCloseExercise(){dmEl('dmExerciseOverlay').hidden=true;dmReturnFocus?.focus();if(builderOverlay.classList.contains('open'))requestBuilderRender({threeD:true,projection:builderModeHasProjections()});}
   function dmOpenExercise(useCurrent=false){
     if(useCurrent){try{const data=builderModelToPortableObject();if(!data.didactic)throw new Error('Najprej izberi način DIDAKTIČNI MODEL.');dmAcceptModel(data,'Trenutni model iz sestavljalnika');}catch(err){updateBuilderStatus(err.message);return;}}
     dmReturnFocus=document.activeElement;dmEl('dmExerciseOverlay').hidden=false;dmExerciseRefresh();dmEl('dmModelSelect').focus();
@@ -8960,6 +9386,110 @@
     if(builderMode.n===10&&builderMode.cellMm===5){builderMode=BUILDER_MODES.didactic;dmReset();syncBuilderModeUI();syncBuilderWorkspaceUI();markBuilderGeometryChanged();updateBuilderStatus('Didaktični način je pripravljen. Sestava je ohranjena; zdaj izberi mesta gravur.');}
     else setBuilderMode('didactic');
   }
+  function dmModelGeometry(data,rotation){return dmWithGeometry(data,rotation,()=>({...dmCleanSolidGeometry(builderState.cells,transformBuilderPoint),bounds:builderTransformedBounds(),projections:Object.fromEntries(['front','top','side'].map(v=>[v,builderOrientedProjectionGeometry(v)]))}));}
+  // Print coordinates are millimetres: a 190 × 210 viewBox is printed at
+  // 190 × 210 mm, with every model unit mapped to exactly 5 mm.
+  function dmPrintEscape(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function dmPrintNum(value){return Number(value.toFixed(5));}
+  function dmPrintLine(a,b,attrs=''){
+    return `<line x1="${dmPrintNum(a[0])}" y1="${dmPrintNum(a[1])}" x2="${dmPrintNum(b[0])}" y2="${dmPrintNum(b[1])}" ${attrs}/>`;
+  }
+  function dmPrintText(x,y,text,size=3.5){return `<text x="${x}" y="${y}" font-size="${size}" font-family="Arial,sans-serif" fill="#222">${dmPrintEscape(text)}</text>`;}
+  function dmPrintGrid(isometric,origin){
+    const box=[5,5,185,205],lines=[];
+    function clip(point,direction){
+      let lo=-Infinity,hi=Infinity;
+      for(let axis=0;axis<2;axis++){
+        const min=box[axis],max=box[axis+2];
+        if(Math.abs(direction[axis])<1e-10){if(point[axis]<min||point[axis]>max)return;continue;}
+        const a=(min-point[axis])/direction[axis],b=(max-point[axis])/direction[axis];
+        lo=Math.max(lo,Math.min(a,b));hi=Math.min(hi,Math.max(a,b));
+      }
+      if(hi<=lo)return;
+      lines.push(dmPrintLine(point.map((v,i)=>v+direction[i]*lo),point.map((v,i)=>v+direction[i]*hi)));
+    }
+    for(let k=-90;k<=90;k++){
+      if(isometric){
+        clip([origin[0]+k*5*Math.sqrt(3)/2,origin[1]],[0,1]);
+        clip([origin[0],origin[1]+k*5],[Math.sqrt(3)/2,.5]);
+        clip([origin[0],origin[1]+k*5],[-Math.sqrt(3)/2,.5]);
+      }else{
+        clip([origin[0]+k*5,origin[1]],[0,1]);
+        clip([origin[0],origin[1]+k*5],[1,0]);
+      }
+    }
+    return `<g data-print-grid="5mm" stroke="#c7c7c7" stroke-width="0.12" fill="none">${lines.join('')}</g>`;
+  }
+  function dmPrintSvg(view,geometry,solution,showHidden){
+    const iso=view==='iso',origin=iso?[95,115]:[95,110],parts=[dmPrintGrid(iso,origin)];
+    const axisAttrs='stroke="#444" stroke-width="0.3" fill="none"';
+    if(iso){
+      const vectors=[[-Math.sqrt(3)/2,.5],[Math.sqrt(3)/2,.5],[0,-1]];
+      const ends=vectors.map(v=>[origin[0]+v[0]*75,origin[1]+v[1]*75]);
+      parts.push('<g data-print-axes="iso">');
+      ends.forEach((p,i)=>{parts.push(dmPrintLine(origin,p,axisAttrs));parts.push(dmPrintText(p[0]+(i===0?-4:2),p[1]+(i===2?-2:5),['x','y','z'][i],4));});
+      parts.push('</g>');
+      if(solution){
+        const O=dmIsoPoint(geometry.bounds.min),map=p=>[origin[0]+(p[0]-O[0])*5,origin[1]+(p[1]-O[1])*5];
+        const surface=geometry.faces.map(face=>({face,depth:face.reduce((sum,p)=>sum+p[0]+p[1]+p[2],0)/face.length})).sort((a,b)=>a.depth-b.depth);
+        parts.push('<g data-print-surface="true" fill="#fafafa" stroke="none">'+surface.map(({face})=>'<polygon points="'+face.map(p=>map(dmIsoPoint(p)).map(dmPrintNum).join(',')).join(' ')+'"/>').join('')+'</g>');
+        const segments=dmIsoSegments(geometry.edges,geometry.faces);
+        if(showHidden)parts.push(`<g data-print-edges="hidden" stroke="#666" stroke-width="0.22" stroke-dasharray="1.5 1" fill="none">${segments.hidden.map(([a,b])=>dmPrintLine(map(a),map(b))).join('')}</g>`);
+        parts.push(`<g data-print-edges="visible" stroke="#111" stroke-width="0.35" stroke-linecap="round" fill="none">${segments.visible.map(([a,b])=>dmPrintLine(map(a),map(b))).join('')}</g>`);
+      }
+    }else{
+      parts.push('<g data-print-axes="ortho">',dmPrintLine([5,origin[1]],[185,origin[1]],axisAttrs),dmPrintLine([origin[0],5],[origin[0],205],axisAttrs));
+      parts.push(dmPrintText(6,origin[1]-2,'x',4),dmPrintText(origin[0]+2,9,'z',4),dmPrintText(180,origin[1]-2,'y',4),dmPrintText(origin[0]+2,204,'y',4),'</g>');
+      parts.push(dmPrintText(10,13,'NARIS'),dmPrintText(105,13,'STRANSKI RIS (Z LEVE)'),dmPrintText(10,201,'TLORIS'));
+      if(solution){
+        // Preserve the deliberate one-cell separation from the coordinate cross.
+        const map=(v,p)=>v==='front'?[origin[0]-(p[0]+1)*5,origin[1]-(p[1]+1)*5]:v==='top'?[origin[0]-(p[0]+1)*5,origin[1]+(p[1]+1)*5]:[origin[0]+(p[0]+1)*5,origin[1]-(p[1]+1)*5];
+        const hidden=[],visible=[];
+        for(const v of ['front','top','side']){
+          const g=geometry.projections[v];
+          for(const [a,b] of g.hiddenEdges)hidden.push(dmPrintLine(map(v,a),map(v,b)));
+          for(const [a,b] of [...g.outerEdges,...g.visibleEdges])visible.push(dmPrintLine(map(v,a),map(v,b)));
+        }
+        if(showHidden)parts.push(`<g data-print-edges="hidden" stroke="#666" stroke-width="0.22" stroke-dasharray="1.5 1" fill="none">${hidden.join('')}</g>`);
+        parts.push(`<g data-print-edges="visible" stroke="#111" stroke-width="0.35" stroke-linecap="round" fill="none">${visible.join('')}</g>`);
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="190mm" height="210mm" viewBox="0 0 190 210" role="img" aria-label="${iso?'Izometrična':'Pravokotna'} ${solution?'rešitev':'mreža za nalogo'}">${parts.join('')}</svg>`;
+  }
+  function dmPrintBuildPages(data,geometry,kind,solution,taskText,code,hidden){
+    const views=kind==='both'?['iso','ortho']:[kind];
+    return views.map(view=>{
+      const label=view==='iso'?'Izometrična risba':'Pravokotne projekcije';
+      const number=data.didactic.printCode||data.didactic.id;
+      const scaleBar=`<svg xmlns="http://www.w3.org/2000/svg" width="60mm" height="9mm" viewBox="0 0 60 9" aria-label="Kontrolna daljica 50 mm"><path d="M5 1V5 M5 3H55 M55 1V5" stroke="#222" stroke-width=".3" fill="none"/>${dmPrintText(21,8,'50 mm',3)}</svg>`;
+      return `<section class="page"><header><h1>${solution?'REŠITEV':'NALOGA'} · ${label}</h1><div class="model">Model ${dmPrintEscape(number)} · ${dmPrintEscape(data.didactic.id)} · ${dmPrintEscape(data.modelName)}</div><p class="task">${dmPrintEscape(taskText)}</p><p class="code">Oznaka naloge: ${dmPrintEscape(code)}</p>${solution?'<p class="name">Gravur in tiskarskih utorov ne rišemo.</p>':'<p class="name">Ime in priimek: __________________________ Razred: ______ Datum: __________</p>'}</header>${dmPrintSvg(view,geometry,solution,hidden[view])}<footer>${scaleBar}<p>Mreža: 5 mm · Merilo 1 : 1<br>Tisk: A4, pokončno, dejanska velikost / 100 %, brez glav in nog.</p></footer></section>`;
+    }).join('');
+  }
+  function dmPrintExercise(withSolution=false){
+    const data=dmExercise.selected;if(!data)return;
+    try{
+      const geometry=withSolution?dmModelGeometry(data,dmCurrentOrientation()):null;
+      const content=dmPrintBuildPages(data,geometry,dmEl('dmDrawingKind').value,withSolution,dmCurrentTaskText(),dmTaskCode(),{
+        iso:dmEl('dmIsoHiddenEdges').checked,ortho:dmEl('dmHiddenEdges').checked
+      });
+      const iframe=document.createElement('iframe');
+      iframe.title=withSolution?'Tisk rešitev':'Tisk naloge';iframe.setAttribute('aria-hidden','true');
+      iframe.style.cssText='position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0';
+      let cleanupTimer;
+      const cleanup=()=>{clearTimeout(cleanupTimer);iframe.remove();};
+      iframe.onload=()=>{
+        const win=iframe.contentWindow;if(!win)return;
+        win.addEventListener('afterprint',cleanup,{once:true});
+        cleanupTimer=setTimeout(cleanup,300000);
+        try{win.focus();win.print();dmEl('dmExerciseStatus').textContent='Tisk: izberi A4, dejansko velikost (100 %) in izključi glave ter noge. Kontrolna daljica mora meriti 50 mm.';}
+        catch(err){cleanup();dmEl('dmExerciseStatus').textContent='Tiskanja ni bilo mogoče odpreti. Poskusi znova.';}
+      };
+      iframe.srcdoc='<!doctype html><html lang="sl"><head><meta charset="utf-8"><title>'+dmPrintEscape(withSolution?'Rešitev':'Naloga')+'</title><style>'+ 
+        '@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:white;color:#111;font-family:Arial,sans-serif}body{width:190mm}.page{width:190mm;break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}header{height:43mm;overflow:hidden}h1{font-size:15pt;margin:0 0 2mm}.model{font-size:10pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.task{font-size:10pt;line-height:1.3;margin:2mm 0;max-height:11mm;overflow:hidden}.code{font-size:8pt;margin:1.5mm 0;overflow-wrap:anywhere}.name{font-size:9pt;margin:2mm 0}svg{display:block;max-width:none}footer{height:14mm;display:flex;align-items:center;justify-content:space-between;gap:3mm}footer p{font-size:8pt;line-height:1.4;margin:0}svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>'+content+'</body></html>';
+      document.body.appendChild(iframe);
+    }catch(err){dmEl('dmExerciseStatus').textContent='Tisk ni pripravljen: '+err.message;}
+  }
+
   function dmInit(){
     dmEl('builderDidacticModeBtn').addEventListener('click',dmEnterMode);
     dmEl('dmAutoMarks').addEventListener('click',dmAutoMarks);
@@ -8975,8 +9505,19 @@
     for(const id of ['dmModelSelect','dmTop','dmFront','dmReference','dmDrawingKind'])dmEl(id).addEventListener('change',dmExerciseRefresh);
     dmEl('dmShowAnswer').addEventListener('click',dmShowAnswer);
     dmEl('dmHiddenEdges').addEventListener('change',()=>{if(dmExercise.geometry)dmRenderOrthographic(dmEl('dmOrthoSvg'),dmExercise.geometry,dmEl('dmHiddenEdges').checked);});
+    dmEl('dmIsoHiddenEdges').addEventListener('change',()=>{if(dmExercise.geometry)dmRenderIso(dmEl('dmIsoSvg'),dmExercise.geometry,dmEl('dmIsoHiddenEdges').checked);});
     dmEl('dmLoadModels').addEventListener('click',()=>dmEl('dmModelFiles').click());dmEl('dmReloadCollection').addEventListener('click',dmLoadCollection);
-    dmEl('dmModelFiles').addEventListener('change',async e=>{let count=0;const errors=[];for(const file of [...e.target.files]){try{dmAcceptModel(JSON.parse(await file.text()),'Naloženo: '+file.name);count++;}catch(err){errors.push(file.name+': '+err.message);}}dmEl('dmExerciseStatus').textContent=`Naloženih ${count} modelov.`+(errors.length?' '+errors.join(' '):'');e.target.value='';});
+    dmEl('dmModelFiles').addEventListener('change',async e=>{let count=0,last=null;const errors=[];for(const file of [...e.target.files]){try{last=dmAcceptModel(JSON.parse(await file.text()),'Naloženo: '+file.name,false);count++;}catch(err){errors.push(file.name+': '+err.message);}}if(count)dmRebuildModels(last);dmEl('dmExerciseStatus').textContent=`Naloženih ${count} modelov.`+(errors.length?' '+errors.join(' '):' Različne lokalne različice so ohranjene ločeno.');e.target.value='';});
+    dmEl('dmRandomTask').addEventListener('click',dmRandomTask);
+    dmEl('dmCopyTask').addEventListener('click',dmCopyTask);
+    dmEl('dmLoadTaskCode').addEventListener('click',()=>dmApplyTaskCode(dmEl('dmTaskCode').value));
+    dmEl('dmTaskCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();dmApplyTaskCode(e.target.value);}});
+    dmEl('dmPrintTask').addEventListener('click',()=>dmPrintExercise(false));
+    dmEl('dmPrintSolution').addEventListener('click',()=>dmPrintExercise(true));
+    dmEl('dmPrintedAll').addEventListener('click',()=>{for(const [,data] of dmUniqueModels())dmExercise.printed.add(dmPhysicalKey(data));dmSavePrinted();dmRenderPrintedList();});
+    dmEl('dmPrintedNone').addEventListener('click',()=>{for(const [,data] of dmUniqueModels())dmExercise.printed.delete(dmPhysicalKey(data));dmSavePrinted();dmRenderPrintedList();});
+    try{const saved=JSON.parse(localStorage.getItem(DM_PRINTED_KEY)||'[]');if(Array.isArray(saved))dmExercise.printed=new Set(saved.filter(x=>typeof x==='string'));}catch(_){}
+    dmRenderPrintedList();
     dmRefresh();
   }
 
@@ -9133,8 +9674,7 @@
   updateBuilderStatus();
   syncBuilderAuthorInfo();
   syncBuilderWorkspaceUI();
-  teacherSubmitClientId();
-  startTeacherSubmitCountdown();
+  initTeacherSubmission();
 
   // ---------- Q&A events -------------------------------------------------
   // Mouse/touch first, keyboard second. On a smart board teacher can work
@@ -9305,6 +9845,7 @@
 
   vkInitGrooveControls();
   dmInit();
+  initBuilderDraft();
   validateShapeData();
   validateCornerClearance();
   setShape(0);
