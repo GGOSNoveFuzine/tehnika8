@@ -1,0 +1,91 @@
+name: Tehnika - zbirka modelov in spletna stran
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tehnika-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Prenesi repozitorij
+        uses: actions/checkout@v6
+
+      - name: Pripravi objavo Pages
+        uses: actions/configure-pages@v5
+
+      - name: Pripravi stran in seznam modelov
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import shutil
+          from pathlib import Path
+
+          # Samodejno prepozna obicajno objavo iz korena ali mape docs.
+          sources = [p for p in (Path('.'), Path('docs'))
+                     if (p / 'didakticni_modeli').is_dir()]
+          if len(sources) != 1:
+              raise SystemExit('Pricakujem eno mapo didakticni_modeli: v korenu ALI v docs.')
+          source = sources[0]
+          if not (source / 'index.html').is_file():
+              raise SystemExit('V mapi spletne strani manjka index.html.')
+          site = Path(os.environ['RUNNER_TEMP']) / 'tehnika-site'
+          shutil.copytree(source, site, dirs_exist_ok=True,
+                          ignore=shutil.ignore_patterns('.git', '.github'))
+          root = site / 'didakticni_modeli'
+          models = []
+          seen = set()
+          for path in sorted(root.rglob('*.tehnikamodel')):
+              data = json.loads(path.read_text(encoding='utf-8-sig'))
+              if data.get('format') != 'tehnikamodel' or data.get('version') != 2:
+                  raise SystemExit(f'Neveljaven format ali razlicica: {path.name}')
+              meta = data.get('didactic')
+              model_id = meta.get('id', '') if isinstance(meta, dict) else ''
+              if not isinstance(model_id, str) or not re.fullmatch(r'DM[A-Z0-9_-]{1,20}', model_id):
+                  raise SystemExit(f'Manjka veljavna didakticna oznaka: {path.name}')
+              if model_id in seen:
+                  raise SystemExit(f'Podvojena oznaka modela: {model_id}')
+              if data.get('gridSize') != [10, 10, 10] or data.get('cellSizeMm') != 5:
+                  raise SystemExit(f'Nepodprta mreza didakticnega modela: {model_id}')
+              if not isinstance(data.get('cells'), list) or not data['cells']:
+                  raise SystemExit(f'Prazen ali neveljaven model: {model_id}')
+              seen.add(model_id)
+              models.append({'id': model_id, 'file': path.relative_to(root).as_posix()})
+          if not models:
+              raise SystemExit('V zbirki ni nobene datoteke .tehnikamodel.')
+          if len(models) > 200:
+              raise SystemExit('Trenutna aplikacija podpira najvec 200 modelov v spletnem seznamu.')
+          output = root / 'modeli.json'
+          output.write_text(json.dumps({'schema': 1, 'models': models},
+                                      ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          (site / '.nojekyll').touch()
+          print(f'Pripravljeno: {len(models)} modelov. Vir strani: {source}')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write(f'## Zbirka modelov\nObjava vsebuje **{len(models)} modelov**.\n')
+          PY
+
+      - name: Pripravi datoteke spletne strani
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/tehnika-site
+
+      - name: Objavi spletno stran
+        id: deployment
+        uses: actions/deploy-pages@v4
